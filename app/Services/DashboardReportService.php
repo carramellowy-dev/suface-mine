@@ -246,7 +246,7 @@ class DashboardReportService
                 $q->whereNull('ended_at')->orWhere('ended_at', '>=', $start);
             })
             ->sum(DB::raw(
-                "COALESCE(EXTRACT(EPOCH FROM (COALESCE(ended_at, NOW()) - started_at)) / 3600, 0)"
+                "COALESCE(TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW())) / 3600, 0)"
             ));
     }
 
@@ -259,7 +259,7 @@ class DashboardReportService
                 $q->whereNull('ended_at')->orWhere('ended_at', '>=', $start);
             })
             ->sum(DB::raw(
-                "COALESCE(EXTRACT(EPOCH FROM (COALESCE(ended_at, NOW()) - started_at)) / 3600, 0)"
+                "COALESCE(TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW())) / 3600, 0)"
             ));
     }
 
