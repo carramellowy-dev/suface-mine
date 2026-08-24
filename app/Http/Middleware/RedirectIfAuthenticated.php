@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
+
+class RedirectIfAuthenticated
+{
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (Auth::guard('web')->check()) {
+                        return redirect()->to(match (Auth::user()->role) {
+                'admin' => '/admin/dashboard',
+                'spv' => '/spv/dashboard',
+                'pegawai' => '/pegawai',
+                default => '/',
+            });
+        }
+
+        return $next($request);
+    }
+}

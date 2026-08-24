@@ -1,0 +1,26 @@
+{
+    "name": "Surface Mine Production",
+    "short_name": "Surface Mine",
+    "start_url": "/login",
+    "background_color": "#ffffff",
+    "theme_color": "#0f1d36",
+    "display": "standalone",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-180x180.png",
+            "sizes": "180x180",
+            "type": "image/png"
+        }
+    ]
+}
