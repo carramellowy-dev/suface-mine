@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class UnitUtilization extends Model
 {
@@ -31,10 +32,14 @@ class UnitUtilization extends Model
 
     public static function latestPerUnit()
     {
+        $latest = static::query()
+            ->select('unit_id', DB::raw('MAX(id) as max_id'))
+            ->groupBy('unit_id');
+
         return static::query()
-            ->selectRaw('DISTINCT ON (unit_id) unit_id, status, started_at, ended_at')
-            ->orderBy('unit_id')
-            ->orderBy('started_at', 'desc')
-            ->orderBy('id', 'desc');
+            ->joinSub($latest, 'latest', function ($join) {
+                $join->on('unit_utilizations.id', '=', 'latest.max_id');
+            })
+            ->select('unit_utilizations.*');
     }
 }
