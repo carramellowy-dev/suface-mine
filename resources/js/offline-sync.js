@@ -176,12 +176,19 @@ async function handleFormSubmit(event) {
             });
 
             if (response.ok) {
-                showToast('Data berhasil dikirim', 'online');
+                showToast('Data berhasil disimpan!', 'online');
                 form.reset();
                 await setBadge();
                 return;
+            } else {
+                const data = await response.json().catch(() => ({}));
+                const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(', ') : 'Gagal menyimpan data. Silakan periksa input Anda.');
+                showToast(msg, 'offline');
+                return;
             }
-        } catch {}
+        } catch (networkErr) {
+            // Jaringan terputus / fetch gagal -> simpan ke outbox offline
+        }
     }
 
     await saveOutbox({ url: form.action, method: form.method || 'POST', payload: payload.payload, files: payload.files, created_at: new Date().toISOString() });

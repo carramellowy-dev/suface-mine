@@ -37,11 +37,19 @@ class PegawaiGeneralController extends Controller
             'is_overtime' => 'nullable|boolean',
         ]);
 
-                $pegawaiId = Auth::user()->pegawai_id;
+                $user = Auth::user();
+        if (! $user->pegawai_id) {
+            $pegawai = \App\Models\Pegawai::firstOrCreate(['nama' => $user->name]);
+            $user->update(['pegawai_id' => $pegawai->id]);
+        }
+        $pegawaiId = $user->pegawai_id;
 
         if (UnitUtilization::active()->where('unit_id', $validated['unit_id'])->exists()) {
             if ($request->header('X-Offline-Replay') === '1') {
                 return response()->json(['success' => true, 'replayed' => true], 200);
+            }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Unit sedang dalam maintenance; tidak dapat input pekerjaan.'], 422);
             }
             return back()->with('error', 'Unit sedang dalam maintenance; tidak dapat input pekerjaan.');
         }
@@ -55,13 +63,23 @@ class PegawaiGeneralController extends Controller
             if ($request->header('X-Offline-Replay') === '1') {
                 return response()->json(['success' => true, 'replayed' => true], 200);
             }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Anda sudah melakukan input pekerjaan pada shift dan tanggal tersebut.'], 422);
+            }
             return back()->with('error', 'Anda sudah melakukan input pekerjaan pada shift dan tanggal tersebut.');
         }
 
         $validated['pegawai_id'] = $pegawaiId;
         $validated['status'] = 'pending';
+        $validated['hm_awal'] = $validated['hm_awal'] ?? null;
+        $validated['hm_akhir'] = $validated['hm_akhir'] ?? null;
+        $validated['hm_total'] = $validated['hm_total'] ?? null;
 
         NonRitasi::create($validated);
+
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json(['success' => true]);
+        }
 
         return back()->with('success', 'Data pekerjaan general berhasil disimpan!');
     }

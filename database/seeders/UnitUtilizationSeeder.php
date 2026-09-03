@@ -2,78 +2,96 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Unit;
 use App\Models\UnitUtilization;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class UnitUtilizationSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::pluck('id');
-        if ($users->isEmpty()) {
+        $operators = User::where('role', 'pegawai')->get();
+        if ($operators->isEmpty()) {
             return;
         }
 
         $descBreakdown = [
-            'Unit macet di lokasi, perlu penarikan',
-            'Ganti selang hidrolik bocor',
-            'Overheat engine, suhu mesin tinggi',
-            'Kerusakan ban / track',
-            'Ganti komponen hidrolik utama',
-            'Kerusakan transmisi / final drive',
+            'Overheat engine & indikator temperatur tinggi',
+            'Ganti selang hidrolik utama bocor',
+            'Kerusakan transmisi dan final drive',
+            'Kerusakan track shoe / baut roda patah',
+            'Sistem pengereman berkurang tekanan angin',
         ];
+
         $descServis = [
-            'Perawatan berkala (PMP)',
-            'Ganti oli mesin & filter',
-            'Servis mesin lengkap',
-            'Perbaikan undercarriage',
-            'Servis transmisi & girboks',
-            'Kalibrasi & penggantian komponen hidrolik',
+            'Perawatan berkala 250 Jam (PMP)',
+            'Ganti oli engine, transmisi, & filter hidrolik',
+            'Servis sistem injeksi dan pendingin',
+            'Penggantian grease autolube & kalibrasi',
         ];
 
-        // --- Units that are CURRENTLY in maintenance (open record, no ended_at) ---
-        $inMaintenance = Unit::whereIn('status', ['maintenance', 'breakdown'])->get();
-        foreach ($inMaintenance as $u) {
-            $isBreakdown = $u->status === 'breakdown';
+        $allUnits = Unit::all();
 
-            // Give a recently-past completed breakdown/servis for realism before the open one.
-            if (rand(0, 1) === 1) {
-                $doneStart = now()->subDays(rand(4, 8))->setTime(7, 0)->addHours(rand(0, 4));
-                $doneEnd = $doneStart->copy()->addHours(rand(8, 16));
-                UnitUtilization::create([
-                    'unit_id' => $u->id,
-                    'status' => 'breakdown',
-                    'started_at' => $doneStart,
-                    'ended_at' => $doneEnd,
-                    'deskripsi' => $descBreakdown[array_rand($descBreakdown)],
-                    'user_id' => $users->random(),
-                ]);
-            }
-
+        // 1. DT-001: Active Breakdown reported by operator1
+        $dt001 = $allUnits->where('kode', 'DT-001')->first();
+        if ($dt001) {
+            // Past maintenance completed
+            $pastStart = now()->subDays(7)->setTime(7, 30);
+            $pastEnd = $pastStart->copy()->addHours(6);
             UnitUtilization::create([
-                'unit_id' => $u->id,
-                'status' => $isBreakdown ? 'breakdown' : 'servis',
-                'started_at' => now()->subDays(rand(0, 3))->setTime(8, 0)->addHours(rand(0, 3)),
-                'ended_at' => null, // masih berlangsung
-                'deskripsi' => ($isBreakdown ? $descBreakdown : $descServis)[array_rand($isBreakdown ? $descBreakdown : $descServis)],
-                'user_id' => $users->random(),
+                'unit_id' => $dt001->id,
+                'status' => 'breakdown',
+                'started_at' => $pastStart,
+                'ended_at' => $pastEnd,
+                'deskripsi' => 'Ganti selang hidrolik bocor',
+                'user_id' => $operators[0]->id,
+            ]);
+            UnitUtilization::create([
+                'unit_id' => $dt001->id,
+                'status' => 'ready',
+                'started_at' => $pastEnd->copy()->addMinutes(15),
+                'ended_at' => $pastEnd->copy()->addMinutes(15),
+                'deskripsi' => 'Perbaikan selesai, unit siap operasi',
+                'user_id' => $operators[0]->id,
+            ]);
+
+            // Active breakdown now
+            UnitUtilization::create([
+                'unit_id' => $dt001->id,
+                'status' => 'breakdown',
+                'started_at' => now()->subDay()->setTime(8, 0),
+                'ended_at' => null,
+                'deskripsi' => 'Overheat engine & selang hidrolik bocor di Pit A',
+                'user_id' => $operators[0]->id,
             ]);
         }
 
-        // --- Units that ALREADY went through maintenance (completed chain → now ready) ---
-        $scheduled = Unit::whereNotIn('status', ['maintenance', 'breakdown'])->where('is_active', true)->get();
-        foreach ($scheduled as $u) {
-            // Only some units had maintenance recently (app is "in production").
-            if (rand(0, 100) >= 65) {
+        // 2. DT-002: Active Servis reported by operator2
+        $dt002 = $allUnits->where('kode', 'DT-002')->first();
+        if ($dt002) {
+            UnitUtilization::create([
+                'unit_id' => $dt002->id,
+                'status' => 'servis',
+                'started_at' => now()->subDay()->setTime(6, 30),
+                'ended_at' => null,
+                'deskripsi' => 'Perawatan berkala 500 Jam (PMP) di Workshop',
+                'user_id' => $operators[1]->id,
+            ]);
+        }
+
+        // 3. Historical completed logs for other units
+        foreach ($allUnits as $u) {
+            if (in_array($u->kode, ['DT-001', 'DT-002'])) {
                 continue;
             }
 
-            $bdStart = now()->subDays(rand(2, 12))->setTime(7, 0)->addHours(rand(0, 3));
-            $bdEnd = $bdStart->copy()->addHours(rand(6, 14));
+            // Create completed maintenance chains in the past 14 days
+            $bdStart = now()->subDays(rand(4, 14))->setTime(7, 0)->addHours(rand(0, 3));
+            $bdEnd = $bdStart->copy()->addHours(rand(4, 8));
             $svStart = $bdEnd;
-            $svEnd = $svStart->copy()->addHours(rand(18, 60));
+            $svEnd = $svStart->copy()->addHours(rand(8, 24));
+            $op = $operators->random();
 
             UnitUtilization::create([
                 'unit_id' => $u->id,
@@ -81,24 +99,26 @@ class UnitUtilizationSeeder extends Seeder
                 'started_at' => $bdStart,
                 'ended_at' => $bdEnd,
                 'deskripsi' => $descBreakdown[array_rand($descBreakdown)],
-                'user_id' => $users->random(),
+                'user_id' => $op->id,
             ]);
+
             UnitUtilization::create([
                 'unit_id' => $u->id,
                 'status' => 'servis',
                 'started_at' => $svStart,
                 'ended_at' => $svEnd,
                 'deskripsi' => $descServis[array_rand($descServis)],
-                'user_id' => $users->random(),
+                'user_id' => $op->id,
             ]);
-            // Latest record = ready → dashboard counts unit as active (already out of maintenance).
+
+            $readyTime = $svEnd->copy()->addMinutes(rand(10, 30));
             UnitUtilization::create([
                 'unit_id' => $u->id,
                 'status' => 'ready',
-                'started_at' => $svEnd->copy()->addMinutes(rand(5, 30)),
-                'ended_at' => null,
-                'deskripsi' => 'Selesai maintenance, unit siap operasi',
-                'user_id' => $users->random(),
+                'started_at' => $readyTime,
+                'ended_at' => $readyTime,
+                'deskripsi' => 'Selesai perbaikan/servis, unit beroperasi normal',
+                'user_id' => $op->id,
             ]);
         }
     }

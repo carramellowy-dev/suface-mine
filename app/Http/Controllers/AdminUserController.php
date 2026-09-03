@@ -10,7 +10,7 @@ class AdminUserController extends Controller
 {
     public function index(Request $request)
     {
-        $query = User::with('pegawai');
+        $query = User::query();
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
@@ -29,20 +29,39 @@ class AdminUserController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users,username',
-            'password' => 'required|string|min:6',
-            'role' => 'required|in:admin,spv,pegawai',
-            'pegawai_id' => 'nullable|exists:pegawais,id',
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'username' => 'nullable|string|max:255|unique:users,username',
+            'role'     => 'required|in:spv,pegawai',
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $role = $request->role;
+        $username = trim((string) $request->username);
 
-        User::create($validated);
+        if ($username === '') {
+            $prefix = $role === 'spv' ? 'spv' : 'operator';
+            $num = 1;
+            $username = $prefix . $num;
+            while (User::where('username', $username)->exists()) {
+                $num++;
+                $username = $prefix . $num;
+            }
+        }
+
+        $user = User::create([
+            'name'     => $request->name,
+            'username' => $username,
+            'password' => Hash::make('password'),
+            'role'     => $role,
+        ]);
+
+        if ($role === 'pegawai') {
+            $pegawai = \App\Models\Pegawai::firstOrCreate(['nama' => $request->name]);
+            $user->update(['pegawai_id' => $pegawai->id]);
+        }
 
         return redirect()->route('admin.master-data.index', ['tab' => 'user'])
-            ->with('success', 'User berhasil ditambahkan');
+            ->with('success', 'User ' . $user->name . ' berhasil ditambahkan dengan ID: ' . $user->username);
     }
 
     public function edit(User $user)
@@ -53,20 +72,40 @@ class AdminUserController extends Controller
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users,username,' . $user->id,
+            'name'     => 'required|string|max:255',
+            'username' => 'nullable|string|max:255|unique:users,username,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'role' => 'required|in:admin,spv,pegawai',
-            'pegawai_id' => 'nullable|exists:pegawais,id',
+            'role'     => 'required|in:admin,spv,pegawai',
         ]);
 
-        if ($validated['password']) {
+        $username = trim((string) ($validated['username'] ?? ''));
+        if ($username === '') {
+            $prefix = $validated['role'] === 'spv' ? 'spv' : ($validated['role'] === 'admin' ? 'admin' : 'operator');
+            $num = 1;
+            $username = $prefix . $num;
+            while (User::where('username', $username)->where('id', '!=', $user->id)->exists()) {
+                $num++;
+                $username = $prefix . $num;
+            }
+        }
+        $validated['username'] = $username;
+
+        if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
         }
 
         $user->update($validated);
+
+        if ($user->role === 'pegawai') {
+            if ($user->pegawai_id && $user->pegawai) {
+                $user->pegawai->update(['nama' => $user->name]);
+            } else {
+                $pegawai = \App\Models\Pegawai::firstOrCreate(['nama' => $user->name]);
+                $user->update(['pegawai_id' => $pegawai->id]);
+            }
+        }
 
         return redirect()->route('admin.master-data.index', ['tab' => 'user'])
             ->with('success', 'User berhasil diupdate');

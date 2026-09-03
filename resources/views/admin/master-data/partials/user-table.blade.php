@@ -7,7 +7,7 @@
                 </span>
                 <form method="GET" action="{{ route('admin.master-data.index') }}">
                     <input type="hidden" name="tab" value="user">
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama atau username..." class="form-input pl-10 w-64">
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama atau ID..." class="form-input pl-10 w-64">
                 </form>
             </div>
         </div>
@@ -23,9 +23,8 @@
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">NO</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">NAMA</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">USERNAME</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ID (USERNAME)</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ROLE</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">OPERATOR</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">AKSI</th>
                 </tr>
             </thead>
@@ -34,14 +33,11 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm text-[var(--text)]">{{ $users->firstItem() + $index }}</td>
                         <td class="px-4 py-3 text-sm font-medium text-[var(--text)]">{{ $user->name }}</td>
-                        <td class="px-4 py-3 text-sm text-[var(--text-muted)]">{{ $user->username }}</td>
+                        <td class="px-4 py-3 text-sm font-mono text-[var(--text-muted)]">{{ $user->username }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text)]">
                             <span class="badge {{ $user->role === 'admin' ? 'badge-active' : ($user->role === 'spv' ? 'badge-maintenance' : 'badge-inactive') }}">
-                                {{ ucfirst($user->role) }}
+                                {{ $user->role === 'pegawai' ? 'Operator' : ($user->role === 'spv' ? 'Supervisor' : ucfirst($user->role)) }}
                             </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-[var(--text-muted)]">
-                            {{ $user->pegawai?->nama ?? '-' }}
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
@@ -59,7 +55,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data user</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data user</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -90,29 +86,14 @@
                 <input type="text" name="name" class="form-input" required placeholder="Nama lengkap">
             </div>
             <div>
-                <label class="form-label">Username</label>
-                <input type="text" name="username" class="form-input" required placeholder="username">
-            </div>
-            <div>
-                <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-input" required minlength="6" placeholder="Minimal 6 karakter">
+                <label class="form-label">ID (Opsional)</label>
+                <input type="text" name="username" class="form-input font-mono" placeholder="Otomatis dibuat jika kosong">
             </div>
             <div>
                 <label class="form-label">Role</label>
                 <select name="role" class="form-input" required>
-                    <option value="">Pilih Role</option>
-                    <option value="admin">Admin</option>
                     <option value="spv">Supervisor</option>
-                    <option value="pegawai">Operator</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label">Operator (opsional)</label>
-                <select name="pegawai_id" class="form-input">
-                    <option value="">-- Tidak ada --</option>
-                    @foreach(\App\Models\Pegawai::orderBy('nama')->get() as $peg)
-                        <option value="{{ $peg->id }}">{{ $peg->nama }}</option>
-                    @endforeach
+                    <option value="pegawai" selected>Operator</option>
                 </select>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-[var(--border)]">
@@ -139,8 +120,8 @@
                 <input type="text" name="name" id="edit_user_name" class="form-input" required>
             </div>
             <div>
-                <label class="form-label">Username</label>
-                <input type="text" name="username" id="edit_user_username" class="form-input" required>
+                <label class="form-label">ID (Username)</label>
+                <input type="text" name="username" id="edit_user_username" class="form-input font-mono">
             </div>
             <div>
                 <label class="form-label">Password (kosongkan jika tidak diubah)</label>
@@ -152,15 +133,6 @@
                     <option value="admin">Admin</option>
                     <option value="spv">Supervisor</option>
                     <option value="pegawai">Operator</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label">Operator (opsional)</label>
-                <select name="pegawai_id" id="edit_user_pegawai" class="form-input">
-                    <option value="">-- Tidak ada --</option>
-                    @foreach(\App\Models\Pegawai::orderBy('nama')->get() as $peg)
-                        <option value="{{ $peg->id }}">{{ $peg->nama }}</option>
-                    @endforeach
                 </select>
             </div>
             <div class="flex justify-end gap-3 pt-4 border-t border-[var(--border)]">
@@ -186,7 +158,6 @@ function editUser(id) {
             document.getElementById('edit_user_name').value = data.name;
             document.getElementById('edit_user_username').value = data.username;
             document.getElementById('edit_user_role').value = data.role;
-            document.getElementById('edit_user_pegawai').value = data.pegawai_id || '';
             document.getElementById('edit_user_password').value = '';
             openModal('editUserModal');
         })

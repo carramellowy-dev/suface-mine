@@ -44,17 +44,25 @@ class PegawaiRitasiController extends Controller
             'kendala' => 'nullable|string',
         ]);
 
+        $user = Auth::user();
+        if (! $user->pegawai_id) {
+            $pegawai = \App\Models\Pegawai::firstOrCreate(['nama' => $user->name]);
+            $user->update(['pegawai_id' => $pegawai->id]);
+        }
+        $pegawaiId = $user->pegawai_id;
+
         if (UnitUtilization::active()->where('unit_id', $validated['unit_id'])->exists()) {
             if ($request->header('X-Offline-Replay') === '1') {
                 return response()->json(['success' => true, 'replayed' => true], 200);
+            }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Unit sedang dalam maintenance; tidak dapat input ritasi.'], 422);
             }
             return back()->with('error', 'Unit sedang dalam maintenance; tidak dapat input ritasi.');
         }
 
         $materialUnitDefault = \App\Models\Material::find($validated['material_id'])->unit_default ?? 'ton';
         $validated['quantity_unit'] = $validated['quantity_unit'] ?? $materialUnitDefault;
-
-        $pegawaiId = Auth::user()->pegawai_id;
 
         $exists = Ritasi::where('pegawai_id', $pegawaiId)
             ->where('tanggal', $validated['tanggal'])
@@ -65,6 +73,9 @@ class PegawaiRitasiController extends Controller
             if ($request->header('X-Offline-Replay') === '1') {
                 return response()->json(['success' => true, 'replayed' => true], 200);
             }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Anda sudah melakukan input ritasi pada shift dan tanggal tersebut.'], 422);
+            }
             return back()->with('error', 'Anda sudah melakukan input ritasi pada shift dan tanggal tersebut.');
         }
 
@@ -73,7 +84,7 @@ class PegawaiRitasiController extends Controller
 
         Ritasi::create($validated);
 
-        if ($request->header('X-Requested-With') === 'XMLHttpRequest') {
+        if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['success' => true]);
         }
 

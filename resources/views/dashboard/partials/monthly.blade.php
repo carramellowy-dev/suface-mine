@@ -38,89 +38,88 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('monthlyChart');
-    if (!ctx) return;
+    if (ctx) {
+        const labels = {!! json_encode(array_column($dailyOreOthers, 'date')) !!};
+        const ore = {!! json_encode(array_column($dailyOreOthers, 'ore')) !!};
+        const others = {!! json_encode(array_column($dailyOreOthers, 'others')) !!};
+        const cumulative = {!! json_encode(array_column($dailyOreOthers, 'cumulative')) !!};
 
-    const labels = {!! json_encode(array_column($dailyOreOthers, 'date')) !!};
-    const ore = {!! json_encode(array_column($dailyOreOthers, 'ore')) !!};
-    const others = {!! json_encode(array_column($dailyOreOthers, 'others')) !!};
-    const cumulative = {!! json_encode(array_column($dailyOreOthers, 'cumulative')) !!};
-
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Ore',
-                    data: ore,
-                    backgroundColor: '#1e3a5f',
-                    borderRadius: 4,
-                    yAxisID: 'y',
-                    order: 2
-                },
-                {
-                    label: 'Others',
-                    data: others,
-                    backgroundColor: '#93c5fd',
-                    borderRadius: 4,
-                    yAxisID: 'y',
-                    order: 3
-                },
-                {
-                    label: 'Cumulative',
-                    data: cumulative,
-                    type: 'line',
-                    borderColor: '#1e3a5f',
-                    backgroundColor: 'transparent',
-                    pointBackgroundColor: '#1e3a5f',
-                    pointRadius: 4,
-                    borderWidth: 2,
-                    tension: 0.3,
-                    yAxisID: 'y1',
-                    order: 1
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: { color: '#475569', usePointStyle: true, padding: 16 }
-                }
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Ore',
+                        data: ore,
+                        backgroundColor: '#1e3a5f',
+                        borderRadius: 4,
+                        yAxisID: 'y',
+                        order: 2
+                    },
+                    {
+                        label: 'Others',
+                        data: others,
+                        backgroundColor: '#93c5fd',
+                        borderRadius: 4,
+                        yAxisID: 'y',
+                        order: 3
+                    },
+                    {
+                        label: 'Cumulative',
+                        data: cumulative,
+                        type: 'line',
+                        borderColor: '#1e3a5f',
+                        backgroundColor: 'transparent',
+                        pointBackgroundColor: '#1e3a5f',
+                        pointRadius: 4,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        yAxisID: 'y1',
+                        order: 1
+                    }
+                ]
             },
-            scales: {
-                x: {
-                    grid: { color: '#e2e8f0' },
-                    ticks: { color: '#475569' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#475569', usePointStyle: true, padding: 16 }
+                    }
                 },
-                y: {
-                    type: 'linear',
-                    position: 'left',
-                    grid: { color: '#e2e8f0' },
-                    ticks: { color: '#475569' },
-                    title: { display: true, text: 'Daily', color: '#475569' }
-                },
-                y1: {
-                    type: 'linear',
-                    position: 'right',
-                    grid: { drawOnChartArea: false },
-                    ticks: { color: '#1e3a5f' },
-                    title: { display: true, text: 'Cumulative', color: '#1e3a5f' }
+                scales: {
+                    x: {
+                        grid: { color: '#e2e8f0' },
+                        ticks: { color: '#475569' }
+                    },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: '#e2e8f0' },
+                        ticks: { color: '#475569' },
+                        title: { display: true, text: 'Daily', color: '#475569' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#1e3a5f' },
+                        title: { display: true, text: 'Cumulative', color: '#1e3a5f' }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
-    // Monthly Material Target Chart
+    // Monthly Material Target Chart (Matches Weekly & Daily style)
     const matCtx = document.getElementById('monthlyMaterialChart');
     if (matCtx) {
         const materialPalette = ['#1e3a5f', '#d97706', '#059669', '#dc2626', '#7c3aed', '#0284c7', '#ca8a04', '#db2777', '#475569', '#0d9488'];
-        const mc = {!! json_encode($materialChart) !!};
+        const mc = {!! json_encode($materialChart ?? ['names' => [], 'tonnage' => [], 'target' => [], 'gap' => []]) !!};
         const materialColors = mc.names.map((_, i) => materialPalette[i % materialPalette.length]);
-        const targetReached = mc.names.map((_, i) => mc.gap[i] <= 0);
         const targetValues = mc.target.map((v, i) => mc.target[i] > 0 ? v : null);
 
         new Chart(matCtx, {
@@ -129,30 +128,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: mc.names,
                 datasets: [
                     {
-                        label: 'Tonase (ton)',
-                        data: mc.tonnage,
+                        label: 'Ritasi aktual',
+                        data: mc.actualRitasi,
                         backgroundColor: materialColors,
-                        borderRadius: 4
+                        borderRadius: 4,
+                        stack: 'main',
+                        order: 2
                     },
                     {
-                        label: 'Sisa target (ritasi)',
-                        type: 'bar',
+                        label: 'Sisa target',
                         data: mc.gap,
-                        backgroundColor: 'rgba(239, 68, 68, 0.30)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.25)',
                         borderRadius: 2,
-                        xAxisID: 'x1'
+                        stack: 'main',
+                        order: 3
                     },
                     {
                         label: 'Target (ritasi)',
                         type: 'line',
                         data: targetValues,
-                        xAxisID: 'x1',
                         showLine: false,
                         pointStyle: 'line',
-                        pointRadius: 7,
-                        pointBorderWidth: 3,
-                        pointBackgroundColor: 'transparent',
-                        pointBorderColor: mc.names.map((_, i) => targetReached[i] ? '#10b981' : '#f59e0b')
+                        pointRadius: 0,
+                        pointBorderWidth: 2,
+                        pointBorderColor: '#000',
+                        pointRotation: 90,
+                        order: 1
                     }
                 ]
             },
@@ -162,9 +163,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { grid: { color: '#e2e8f0' }, ticks: { color: '#475569' }, title: { display: true, text: 'Tonase (ton)' } },
-                    x1: { position: 'top', grid: { drawOnChartArea: false }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Ritasi (target)' } },
-                    y: { grid: { display: false }, ticks: { color: '#1e3a5f', font: { weight: 'bold' } } }
+                    x: { stacked: true, grid: { color: '#e2e8f0' }, ticks: { color: '#475569' } },
+                    y: { stacked: true, grid: { display: false }, ticks: { color: '#1e3a5f', font: { weight: 'bold' } } }
                 }
             }
         });

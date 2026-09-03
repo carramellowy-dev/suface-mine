@@ -32,14 +32,13 @@ class AdminTargetController extends Controller
     {
         $validated = $request->validate([
             'material_id' => 'required|exists:materials,id',
-            'tanggal' => 'required|date',
             'periode' => 'required|in:harian,mingguan,bulanan',
             'target_ritasi' => 'required|integer|min:0',
         ]);
 
         DailyTarget::updateOrCreate(
-            ['material_id' => $validated['material_id'], 'tanggal' => $validated['tanggal']],
-            ['periode' => $validated['periode'], 'target_ritasi' => $validated['target_ritasi']]
+            ['material_id' => $validated['material_id'], 'periode' => $validated['periode']],
+            ['target_ritasi' => $validated['target_ritasi']]
         );
 
         return redirect()->route('admin.master-data.index', ['tab' => 'target'])

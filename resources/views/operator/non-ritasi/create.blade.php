@@ -28,6 +28,16 @@
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
+                <label class="form-label">Area Kerja <span class="text-red-500">*</span></label>
+                <select name="area_id" class="form-input" required>
+                    <option value="">Pilih Area Kerja</option>
+                    @foreach($areas as $id => $nama)
+                        <option value="{{ $id }}" {{ $loop->first ? 'selected' : '' }}>{{ $nama }}</option>
+                    @endforeach
+                </select>
+                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Area kerja operasional non-ritasi.</p>
+            </div>
+            <div>
                 <label class="form-label">Lokasi Pekerjaan (Pit / Disposal)</label>
                 <input type="text" name="lokasi_pekerjaan" class="form-input" placeholder="Contoh: Pit 1 North">
                 <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Lokasi spesifik pengerjaan non-ritasi shift ini.</p>
@@ -38,8 +48,6 @@
                 <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Tuliskan detail pekerjaan non-ritasi (seperti standby, cleaning, loading) atau kendala operasional.</p>
             </div>
         </div>
-        
-        <input type="hidden" name="area_id" value="{{ $areas[array_key_first($areas)] ?? 1 }}">
         
         {{-- Buttons --}}
         <div class="flex justify-end gap-3 pt-4 border-t">

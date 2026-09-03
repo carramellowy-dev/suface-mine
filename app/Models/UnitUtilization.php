@@ -27,7 +27,7 @@ class UnitUtilization extends Model
 
     public function scopeActive($query)
     {
-        return $query->whereNull('ended_at');
+        return $query->whereIn('status', ['breakdown', 'servis'])->whereNull('ended_at');
     }
 
     public static function latestPerUnit()

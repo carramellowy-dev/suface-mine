@@ -13,9 +13,9 @@ return new class extends Migration {
             $table->foreignId('area_id')->constrained()->cascadeOnDelete();
             $table->date('tanggal');
             $table->enum('shift', ['siang', 'malam']);
-            $table->decimal('hm_awal', 10, 2);
-            $table->decimal('hm_akhir', 10, 2);
-            $table->decimal('hm_total', 10, 2);
+            $table->decimal('hm_awal', 10, 2)->nullable();
+            $table->decimal('hm_akhir', 10, 2)->nullable();
+            $table->decimal('hm_total', 10, 2)->nullable();
             $table->time('jam_mulai')->nullable();
             $table->time('jam_selesai')->nullable();
             $table->boolean('is_overtime')->default(false);
