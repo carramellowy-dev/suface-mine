@@ -19,7 +19,9 @@ class RitasiSeeder extends Seeder
         $dtUnits = Unit::where('tipe', 'dump_truck')
             ->whereNotIn('kode', ['DT-001', 'DT-002'])
             ->get();
-        $areas = Area::where('status', 'active')->get();
+        $areas = Area::where('status', 'active')
+            ->whereNotIn('kode', ['AREA-012', 'AREA-013', 'AREA-014'])
+            ->get();
         $materials = Material::whereIn('kategori', ['ore', 'waste'])->get();
         $spvUser = User::where('role', 'spv')->first();
 
@@ -33,8 +35,8 @@ class RitasiSeeder extends Seeder
 
         $rows = [];
 
-        // Generate past 30 days of hauling data (from day 1 to 30; day 0 = today, leaving day 0 clear for manual test)
-        for ($day = 1; $day <= 30; $day++) {
+        // Generate hauling data including day 0 (today) and past 30 days
+        for ($day = 0; $day <= 30; $day++) {
             $tanggal = now()->subDays($day)->format('Y-m-d');
 
             foreach ($shifts as $shift) {

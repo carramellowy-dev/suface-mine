@@ -67,9 +67,14 @@ async function saveOutbox(item) {
 }
 
 async function freshCsrf() {
-    const response = await fetch('/csrf-token', { headers: { Accept: 'application/json' } });
-    const data = await response.json();
-    return data.token;
+    try {
+        const response = await fetch('/csrf-token', { headers: { Accept: 'application/json' } });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data?.token || null;
+    } catch {
+        return null;
+    }
 }
 
 async function replayOutbox() {
@@ -86,8 +91,12 @@ async function replayOutbox() {
 
     for (const item of items) {
         try {
-            const formData = new FormData();
             const token = await freshCsrf();
+            if (!token) {
+                break;
+            }
+
+            const formData = new FormData();
             formData.append('_token', token);
 
             for (const [key, value] of Object.entries(item.payload || {})) {
@@ -108,6 +117,9 @@ async function replayOutbox() {
             if (response.ok) {
                 await withStore('readwrite', store => store.delete(item.id));
                 showToast('Data offline berhasil tersinkronisasi', 'online');
+            } else if (response.status === 401) {
+                showToast('Sesi berakhir. Silakan login kembali untuk sinkronisasi.', 'offline');
+                break;
             } else if (response.status === 422 || response.status === 409) {
                 // Validation/duplicate error - remove from outbox
                 await withStore('readwrite', store => store.delete(item.id));
@@ -195,7 +207,7 @@ async function handleFormSubmit(event) {
     showToast('Tersimpan offline', 'offline');
     form.reset();
     await setBadge();
-    navigator.serviceWorker?.ready.then(reg => reg.sync?.register(form.dataset.syncTag || 'absensi-sync')).catch(() => {});
+    navigator.serviceWorker?.ready.then(reg => reg.sync?.register(form.dataset.syncTag || 'ritasi-sync')).catch(() => {});
 }
 
 window.addEventListener('online', replayOutbox);

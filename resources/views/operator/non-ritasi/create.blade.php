@@ -4,16 +4,24 @@
 
 @section('content')
 
+<div class="flex items-center justify-between mb-4">
+    <p class="text-sm text-slate-500">Form pelaporan operasional unit alat berat non-ritasi (Excavator, Dozer, Grader, Loader).</p>
+    <a href="{{ route('pegawai.non-ritasi.riwayat') }}" class="btn-secondary flex items-center gap-1.5 text-xs sm:text-sm py-1.5 px-3">
+        <span class="material-symbols-outlined text-base">history</span>
+        Lihat Riwayat
+    </a>
+</div>
+
 @include('operator.partials.validation-errors')
 
-@include('operator.partials.session-info', ['description' => 'Silakan isi data ritasi operasional harian. Pastikan durasi HM sesuai (6 - 11 Jam).'])
+@include('operator.partials.session-info', ['description' => 'Silakan isi data operasional alat berat non-ritasi harian. Pastikan durasi HM sesuai (6 - 11 Jam).'])
 
 <form action="{{ route('pegawai.non-ritasi.store') }}" method="POST" data-offline-form data-sync-tag="non-ritasi-sync">
     @csrf
     
     <div class="card p-6">
         {{-- Data Dasar --}}
-        @include('operator.partials.data-dasar', ['units' => $units, 'latestStatus' => $latestStatus])
+        @include('operator.partials.data-dasar', ['units' => $units, 'latestStatus' => $latestStatus, 'unitLabel' => 'Nomor Unit (Excavator / Dozer / Grader / Loader)'])
         
         {{-- Hour Meter --}}
         @include('operator.partials.hour-meter')
@@ -54,7 +62,7 @@
             <button type="reset" class="btn-secondary">Reset</button>
             <button type="submit" class="btn-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">save</span>
-                Simpan Data Ritasi
+                Simpan Data Non-Ritasi
             </button>
         </div>
     </div>

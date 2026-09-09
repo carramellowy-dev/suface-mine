@@ -3,7 +3,10 @@
 @section('title', 'Detail Rekapan Operator')
 
 @section('content')
-@php $role = Auth::user()->role; @endphp
+@php
+    $userRole = Auth::user()->role;
+    $role = in_array($userRole, ['spv', 'senior_spv']) ? 'spv' : $userRole;
+@endphp
 
 <div class="flex items-center justify-between mb-6">
     <p class="text-sm text-slate-500">Operator: <strong>{{ $pegawai->nama }}</strong></p>
@@ -55,10 +58,15 @@
 </div>
 
 <!-- Ritasi Section -->
-<div class="card overflow-hidden mb-6">
-    <div class="p-4 border-b flex items-center gap-2">
-        <span class="material-symbols-outlined text-[var(--primary)]">local_shipping</span>
-        <h2 class="section-title mb-0">Ritasi (Hauling)</h2>
+<div class="card overflow-hidden mb-6 !p-0">
+    <div class="p-4 border-b flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[var(--primary)]">local_shipping</span>
+            <h2 class="section-title mb-0">Ritasi (Hauling)</h2>
+        </div>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+            Total: {{ $ritasis->total() }} Data
+        </span>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
@@ -67,11 +75,13 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TANGGAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SHIFT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">UNIT</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA & LOKASI</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">MATERIAL</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">RITASI</th>
-                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">QTY</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AWAL</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AKHIR</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">TOTAL HM</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">RITASI</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">TOTAL QTY</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
@@ -79,28 +89,45 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm whitespace-nowrap">{{ $r->tanggal?->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-sm">{{ ucfirst($r->shift) }}</td>
-                        <td class="px-4 py-3 text-sm font-mono">{{ $r->unit->kode ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm">{{ $r->area->nama ?? '-' }}</td>
+                        <td class="px-4 py-3 text-sm font-mono font-medium">{{ $r->unit->kode ?? '-' }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <div class="font-medium text-slate-800">{{ $r->area->nama ?? '-' }}</div>
+                            @if($r->lokasi_pekerjaan)
+                                <div class="text-xs text-slate-500">{{ $r->lokasi_pekerjaan }}</div>
+                            @endif
+                        </td>
                         <td class="px-4 py-3 text-sm">{{ $r->material->nama ?? '-' }}</td>
-                        <td class="px-4 py-3 text-sm text-right">{{ $r->jumlah_ritasi }}</td>
-                        <td class="px-4 py-3 text-sm text-right">{{ number_format($r->quantity, 2) }} {{ $r->quantity_unit }}</td>
+                        <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($r->hm_awal, 1) }}</td>
+                        <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($r->hm_akhir, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-medium text-[var(--primary)]">{{ number_format($r->hm_total, 1) }}</td>
+                        <td class="px-4 py-3 text-sm text-right font-semibold">{{ $r->jumlah_ritasi }}</td>
+                        <td class="px-4 py-3 text-sm text-right">{{ number_format($r->quantity, 2) }} {{ $r->quantity_unit }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-6 text-center text-slate-500">Tidak ada data ritasi</td>
+                        <td colspan="10" class="px-4 py-6 text-center text-slate-500">Tidak ada data ritasi</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+    @if($ritasis->hasPages())
+        <div class="p-4 border-t border-slate-100">
+            {{ $ritasis->links() }}
+        </div>
+    @endif
 </div>
 
 <!-- Non Ritasi Section -->
-<div class="card overflow-hidden mb-6">
-    <div class="p-4 border-b flex items-center gap-2">
-        <span class="material-symbols-outlined text-[var(--primary)]">construction</span>
-        <h2 class="section-title mb-0">Non-Ritasi (Operasional)</h2>
+<div class="card overflow-hidden mb-6 !p-0">
+    <div class="p-4 border-b flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[var(--primary)]">construction</span>
+            <h2 class="section-title mb-0">Non-Ritasi (Operasional)</h2>
+        </div>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+            Total: {{ $nonRitasis->total() }} Data
+        </span>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
@@ -121,14 +148,14 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm whitespace-nowrap">{{ $nr->tanggal?->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-sm">{{ ucfirst($nr->shift) }}</td>
-                        <td class="px-4 py-3 text-sm font-mono">{{ $nr->unit->kode ?? '-' }}</td>
+                        <td class="px-4 py-3 text-sm font-mono font-medium">{{ $nr->unit->kode ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">{{ $nr->area->nama ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">
-                            <div class="font-medium">{{ $nr->lokasi_pekerjaan }}</div>
+                            <div class="font-medium text-slate-800">{{ $nr->lokasi_pekerjaan }}</div>
                             <div class="text-xs text-slate-500">{{ $nr->deskripsi_pekerjaan }}</div>
                         </td>
-                        <td class="px-4 py-3 text-sm text-right">{{ number_format($nr->hm_awal, 1) }}</td>
-                        <td class="px-4 py-3 text-sm text-right">{{ number_format($nr->hm_akhir, 1) }}</td>
+                        <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($nr->hm_awal, 1) }}</td>
+                        <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($nr->hm_akhir, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-medium text-[var(--primary)]">{{ number_format($nr->hm_total, 1) }}</td>
                     </tr>
                 @empty
@@ -139,13 +166,23 @@
             </tbody>
         </table>
     </div>
+    @if($nonRitasis->hasPages())
+        <div class="p-4 border-t border-slate-100">
+            {{ $nonRitasis->links() }}
+        </div>
+    @endif
 </div>
 
 <!-- General Section -->
-<div class="card overflow-hidden">
-    <div class="p-4 border-b flex items-center gap-2">
-        <span class="material-symbols-outlined text-[var(--primary)]">engineering</span>
-        <h2 class="section-title mb-0">Tugas General</h2>
+<div class="card overflow-hidden !p-0">
+    <div class="p-4 border-b flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[var(--primary)]">engineering</span>
+            <h2 class="section-title mb-0">Tugas General</h2>
+        </div>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+            Total: {{ $generals->total() }} Data
+        </span>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
@@ -153,7 +190,6 @@
                 <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TANGGAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SHIFT</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">UNIT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">LOKASI / AKTIVITAS</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">JAM MULAI</th>
@@ -165,22 +201,36 @@
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm whitespace-nowrap">{{ $gen->tanggal?->format('d M Y') }}</td>
                         <td class="px-4 py-3 text-sm">{{ ucfirst($gen->shift) }}</td>
-                        <td class="px-4 py-3 text-sm font-mono">{{ $gen->unit->kode ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">{{ $gen->area->nama ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">
-                            <div class="font-medium">{{ $gen->lokasi_pekerjaan }}</div>
+                            <div class="font-medium text-slate-800">{{ $gen->lokasi_pekerjaan }}</div>
                             <div class="text-xs text-slate-500">{{ $gen->deskripsi_pekerjaan }}</div>
+                            @if($gen->supervisor || $gen->seniorSpv)
+                                <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-2">
+                                    @if($gen->supervisor)
+                                        <span>SPV: {{ $gen->supervisor->name }}</span>
+                                    @endif
+                                    @if($gen->seniorSpv)
+                                        <span>Sr. SPV: {{ $gen->seniorSpv->name }}</span>
+                                    @endif
+                                </div>
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-center font-mono">{{ substr($gen->jam_mulai, 0, 5) }}</td>
                         <td class="px-4 py-3 text-sm text-center font-mono">{{ substr($gen->jam_selesai, 0, 5) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-6 text-center text-slate-500">Tidak ada data tugas general</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-slate-500">Tidak ada data tugas general</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
+    @if($generals->hasPages())
+        <div class="p-4 border-t border-slate-100">
+            {{ $generals->links() }}
+        </div>
+    @endif
 </div>
 @endsection

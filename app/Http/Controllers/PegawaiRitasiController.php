@@ -64,6 +64,22 @@ class PegawaiRitasiController extends Controller
         $materialUnitDefault = \App\Models\Material::find($validated['material_id'])->unit_default ?? 'ton';
         $validated['quantity_unit'] = $validated['quantity_unit'] ?? $materialUnitDefault;
 
+        $unitTaken = Ritasi::where('unit_id', $validated['unit_id'])
+            ->where('tanggal', $validated['tanggal'])
+            ->where('shift', $validated['shift'])
+            ->where('pegawai_id', '!=', $pegawaiId)
+            ->exists();
+
+        if ($unitTaken) {
+            if ($request->header('X-Offline-Replay') === '1') {
+                return response()->json(['success' => false, 'message' => 'Unit sudah digunakan oleh operator lain pada shift dan tanggal ini.'], 422);
+            }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Unit sudah digunakan oleh operator lain pada shift dan tanggal ini.'], 422);
+            }
+            return back()->with('error', 'Unit sudah digunakan oleh operator lain pada shift dan tanggal ini.');
+        }
+
         $exists = Ritasi::where('pegawai_id', $pegawaiId)
             ->where('tanggal', $validated['tanggal'])
             ->where('shift', $validated['shift'])
@@ -79,8 +95,19 @@ class PegawaiRitasiController extends Controller
             return back()->with('error', 'Anda sudah melakukan input ritasi pada shift dan tanggal tersebut.');
         }
 
+        $hmTotal = $validated['hm_akhir'] - $validated['hm_awal'];
+        if ($hmTotal > 12) {
+            if ($request->header('X-Offline-Replay') === '1') {
+                return response()->json(['success' => false, 'message' => 'Total Hour Meter (HM) tidak boleh melebihi 12 jam dalam 1 shift.'], 422);
+            }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => 'Total Hour Meter (HM) tidak boleh melebihi 12 jam dalam 1 shift.'], 422);
+            }
+            return back()->with('error', 'Total Hour Meter (HM) tidak boleh melebihi 12 jam dalam 1 shift.');
+        }
+
         $validated['pegawai_id'] = $pegawaiId;
-        $validated['hm_total'] = $validated['hm_akhir'] - $validated['hm_awal'];
+        $validated['hm_total'] = $hmTotal;
 
         Ritasi::create($validated);
 

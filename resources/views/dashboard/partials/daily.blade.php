@@ -14,6 +14,7 @@
     $active = (int)($kpi['active_units'] ?? 0);
     $maintenance = (int)($kpi['maintenance_units'] ?? 0);
     $pa = (float)($kpi['pa'] ?? 0);
+    $ua = (float)($kpi['ua'] ?? 0);
     $hasData = $tonnage > 0 || $fuel > 0;
 @endphp
 
@@ -52,7 +53,7 @@
                 <span class="material-symbols-outlined text-[var(--primary)] text-xl">speed</span>
             </div>
             <p class="text-xs text-slate-500 font-medium">PA / UA</p>
-            <p class="text-xl font-bold text-[var(--primary)]">{{ number_format($pa, 1) }}%</p>
+            <p class="text-lg font-bold text-[var(--primary)]">{{ number_format($pa, 1) }}% <span class="text-xs text-slate-400 font-semibold">/</span> {{ number_format($ua, 1) }}%</p>
         </div>
     </div>
 </div>

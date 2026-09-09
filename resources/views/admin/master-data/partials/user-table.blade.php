@@ -35,8 +35,8 @@
                         <td class="px-4 py-3 text-sm font-medium text-[var(--text)]">{{ $user->name }}</td>
                         <td class="px-4 py-3 text-sm font-mono text-[var(--text-muted)]">{{ $user->username }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text)]">
-                            <span class="badge {{ $user->role === 'admin' ? 'badge-active' : ($user->role === 'spv' ? 'badge-maintenance' : 'badge-inactive') }}">
-                                {{ $user->role === 'pegawai' ? 'Operator' : ($user->role === 'spv' ? 'Supervisor' : ucfirst($user->role)) }}
+                            <span class="badge {{ $user->role === 'admin' ? 'badge-active' : ($user->role === 'spv' ? 'badge-maintenance' : ($user->role === 'senior_spv' ? 'badge-in-progress' : 'badge-inactive')) }}">
+                                {{ $user->role === 'pegawai' ? 'Operator' : ($user->role === 'spv' ? 'Supervisor' : ($user->role === 'senior_spv' ? 'Senior SPV' : ucfirst($user->role))) }}
                             </span>
                         </td>
                         <td class="px-4 py-3">
@@ -92,6 +92,7 @@
             <div>
                 <label class="form-label">Role</label>
                 <select name="role" class="form-input" required>
+                    <option value="senior_spv">Senior SPV</option>
                     <option value="spv">Supervisor</option>
                     <option value="pegawai" selected>Operator</option>
                 </select>
@@ -131,6 +132,7 @@
                 <label class="form-label">Role</label>
                 <select name="role" id="edit_user_role" class="form-input" required>
                     <option value="admin">Admin</option>
+                    <option value="senior_spv">Senior SPV</option>
                     <option value="spv">Supervisor</option>
                     <option value="pegawai">Operator</option>
                 </select>

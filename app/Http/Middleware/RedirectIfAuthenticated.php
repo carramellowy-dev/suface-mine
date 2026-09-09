@@ -14,7 +14,7 @@ class RedirectIfAuthenticated
         if (Auth::guard('web')->check()) {
                         return redirect()->to(match (Auth::user()->role) {
                 'admin' => '/admin/dashboard',
-                'spv' => '/spv/dashboard',
+                'spv', 'senior_spv' => '/spv/dashboard',
                 'pegawai' => '/pegawai',
                 default => '/',
             });

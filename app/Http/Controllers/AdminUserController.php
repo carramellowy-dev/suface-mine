@@ -32,14 +32,14 @@ class AdminUserController extends Controller
         $request->validate([
             'name'     => 'required|string|max:255',
             'username' => 'nullable|string|max:255|unique:users,username',
-            'role'     => 'required|in:spv,pegawai',
+            'role'     => 'required|in:admin,spv,senior_spv,pegawai',
         ]);
 
         $role = $request->role;
         $username = trim((string) $request->username);
 
         if ($username === '') {
-            $prefix = $role === 'spv' ? 'spv' : 'operator';
+            $prefix = $role === 'spv' ? 'spv' : ($role === 'senior_spv' ? 'srspv' : ($role === 'admin' ? 'admin' : 'operator'));
             $num = 1;
             $username = $prefix . $num;
             while (User::where('username', $username)->exists()) {
@@ -75,12 +75,12 @@ class AdminUserController extends Controller
             'name'     => 'required|string|max:255',
             'username' => 'nullable|string|max:255|unique:users,username,' . $user->id,
             'password' => 'nullable|string|min:6',
-            'role'     => 'required|in:admin,spv,pegawai',
+            'role'     => 'required|in:admin,spv,senior_spv,pegawai',
         ]);
 
         $username = trim((string) ($validated['username'] ?? ''));
         if ($username === '') {
-            $prefix = $validated['role'] === 'spv' ? 'spv' : ($validated['role'] === 'admin' ? 'admin' : 'operator');
+            $prefix = $validated['role'] === 'spv' ? 'spv' : ($validated['role'] === 'senior_spv' ? 'srspv' : ($validated['role'] === 'admin' ? 'admin' : 'operator'));
             $num = 1;
             $username = $prefix . $num;
             while (User::where('username', $username)->where('id', '!=', $user->id)->exists()) {

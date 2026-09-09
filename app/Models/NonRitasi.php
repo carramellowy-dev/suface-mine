@@ -12,6 +12,8 @@ class NonRitasi extends Model
     protected $fillable = [
         'pegawai_id',
         'unit_id',
+        'supervisor_id',
+        'senior_spv_id',
         'area_id',
         'shift',
         'tanggal',
@@ -46,6 +48,16 @@ class NonRitasi extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    public function supervisor()
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function seniorSpv()
+    {
+        return $this->belongsTo(User::class, 'senior_spv_id');
     }
 
     public function area()

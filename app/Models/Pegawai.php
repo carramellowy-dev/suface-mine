@@ -22,4 +22,9 @@ class Pegawai extends Model
     {
         return $this->hasOne(User::class);
     }
+
+    public function getNikAttribute(): string
+    {
+        return $this->user?->username ?? sprintf('OP-%03d', $this->id);
+    }
 }

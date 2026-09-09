@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Ritasi;
+use App\Models\NonRitasi;
 use App\Models\Unit;
 use App\Models\UnitUtilization;
 use App\Models\DailyTarget;
@@ -79,20 +80,31 @@ class DashboardReportService
         $units = Unit::where('is_active', true)->orderBy('kode')->get();
         $unitCount = $units->count();
         $days = (int) $start->diffInDays($end) + 1;
-        $sh = $unitCount * 12 * $days;
+        $hoursPerDay = $request->filled('shift') ? 12 : 24;
+        $sh = $unitCount * $hoursPerDay * $days;
         $bd = $this->bdHoursForRange($start, $end);
-        $available = $sh - $bd;
-        $pa = $sh > 0 ? ($available / $sh) * 100 : 0;
+        $available = max(0.0, $sh - $bd);
+        $pa = $sh > 0 ? min(100.0, ($available / $sh) * 100) : 0;
 
         $baseQ = fn () => Ritasi::whereBetween('tanggal', [$start->toDateString(), $end->toDateString()])
             ->when($request->filled('shift'), fn ($q) => $q->where('shift', $request->shift));
 
-        $wh = (float) $baseQ()->sum(DB::raw('LEAST(hm_total, 12)'));
-        $ua = $available > 0 ? ($wh / $available) * 100 : 0;
+        $baseNonRitasiQ = fn () => NonRitasi::whereNotNull('unit_id')
+            ->whereBetween('tanggal', [$start->toDateString(), $end->toDateString()])
+            ->when($request->filled('shift'), fn ($q) => $q->where('shift', $request->shift));
 
-        $fuel = (float) $baseQ()
+        $whRitasi = (float) $baseQ()->sum(DB::raw('LEAST(hm_total, 12)'));
+        $whNonRitasi = (float) $baseNonRitasiQ()->sum(DB::raw('LEAST(hm_total, 12)'));
+        $wh = $whRitasi + $whNonRitasi;
+        $ua = $available > 0 ? min(100.0, ($wh / $available) * 100) : 0;
+
+        $fuelRitasi = (float) $baseQ()
             ->leftJoin('units', 'units.id', '=', 'ritasis.unit_id')
             ->sum(DB::raw('COALESCE(ritasis.fuel_consumption, units.fuel_consumption_rate * ritasis.hm_total)'));
+        $fuelNonRitasi = (float) $baseNonRitasiQ()
+            ->leftJoin('units', 'units.id', '=', 'non_ritasis.unit_id')
+            ->sum(DB::raw('COALESCE(non_ritasis.fuel_consumption, units.fuel_consumption_rate * non_ritasis.hm_total)'));
+        $fuel = $fuelRitasi + $fuelNonRitasi;
 
         $ritasis = $baseQ()->with('material')->get();
         $tonnage = (float) $ritasis->sum(fn ($r) => $r->quantity_tonnes);
@@ -106,20 +118,26 @@ class DashboardReportService
         $timelineSiang = [];
         $timelineMalam = [];
         foreach ($units as $u) {
-            $red = $this->unitMaintenanceHours($u->id, $start, $end);
-            $greenS = (float) $baseQ()->where('unit_id', $u->id)->where('shift', 'siang')
-                ->sum(DB::raw('LEAST(hm_total, 12)'));
-            $greenM = (float) $baseQ()->where('unit_id', $u->id)->where('shift', 'malam')
-                ->sum(DB::raw('LEAST(hm_total, 12)'));
-            $whiteS = max(12 - $red - $greenS, 0.0);
-            $whiteM = max(12 - $red - $greenM, 0.0);
+            $redTotal = $this->unitMaintenanceHours($u->id, $start, $end);
+            $redS = min(12.0, $redTotal);
+            $redM = min(12.0, max(0.0, $redTotal - 12.0));
+            $greenS = (float) ($baseQ()->where('unit_id', $u->id)->where('shift', 'siang')
+                ->sum(DB::raw('LEAST(hm_total, 12)'))
+                + $baseNonRitasiQ()->where('unit_id', $u->id)->where('shift', 'siang')
+                ->sum(DB::raw('LEAST(hm_total, 12)')));
+            $greenM = (float) ($baseQ()->where('unit_id', $u->id)->where('shift', 'malam')
+                ->sum(DB::raw('LEAST(hm_total, 12)'))
+                + $baseNonRitasiQ()->where('unit_id', $u->id)->where('shift', 'malam')
+                ->sum(DB::raw('LEAST(hm_total, 12)')));
+            $whiteS = max(12 - $redS - $greenS, 0.0);
+            $whiteM = max(12 - $redM - $greenM, 0.0);
             $timelineSiang[] = [
                 'unit_id' => $u->id, 'kode' => $u->kode,
-                'red' => round($red, 2), 'green' => round($greenS, 2), 'white' => round($whiteS, 2), 'status' => $u->status,
+                'red' => round($redS, 2), 'green' => round($greenS, 2), 'white' => round($whiteS, 2), 'status' => $u->status,
             ];
             $timelineMalam[] = [
                 'unit_id' => $u->id, 'kode' => $u->kode,
-                'red' => round($red, 2), 'green' => round($greenM, 2), 'white' => round($whiteM, 2), 'status' => $u->status,
+                'red' => round($redM, 2), 'green' => round($greenM, 2), 'white' => round($whiteM, 2), 'status' => $u->status,
             ];
         }
         $n = max($unitCount, 1);
@@ -183,8 +201,8 @@ class DashboardReportService
         $oreNames = ['Bauxite Ore (Raw)', 'Processed Alumina', 'Pasir Hitam', 'Mining Tuff', 'Batu Pica (5/15)', 'Tuff Off', 'KCN', 'Cake', 'DSTuff'];
         $dailyOreOthers = $this->dailyOreOthers($start, $end, $ritasis, $oreNames);
 
-        $availability = $this->availabilityByType($start, $end, $units, $bd);
-        $uoa = $this->uoaByType($start, $end, $units, $baseQ);
+        $availability = $this->availabilityByType($start, $end, $units, $request);
+        $uoa = $this->uoaByType($start, $end, $units, $baseQ, $baseNonRitasiQ, $request);
 
         return [
             'kpi' => [
@@ -217,12 +235,12 @@ class DashboardReportService
 
     private function range(Request $request, string $type): array
     {
-        if ($type === 'weekly' && $request->filled('week')) {
-            $w = Carbon::parse($request->week);
+        if ($type === 'weekly') {
+            $w = $request->filled('week') ? Carbon::parse($request->week) : Carbon::today();
             return [$w->copy()->startOfWeek(), $w->copy()->endOfWeek()];
         }
-        if ($type === 'monthly' && $request->filled('month')) {
-            $m = Carbon::parse($request->month);
+        if ($type === 'monthly') {
+            $m = $request->filled('month') ? Carbon::parse($request->month) : Carbon::today();
             return [$m->copy()->startOfMonth(), $m->copy()->endOfMonth()];
         }
         $date = $request->filled('date')
@@ -240,26 +258,32 @@ class DashboardReportService
 
     private function bdHoursForRange(Carbon $start, Carbon $end): float
     {
+        $rangeStart = $start->copy()->startOfDay()->toDateTimeString();
+        $rangeEnd = $end->copy()->endOfDay()->toDateTimeString();
+
         return (float) UnitUtilization::whereIn('status', ['breakdown', 'servis'])
-            ->where('started_at', '<=', $end)
-            ->where(function ($q) use ($start) {
-                $q->whereNull('ended_at')->orWhere('ended_at', '>=', $start);
+            ->where('started_at', '<=', $rangeEnd)
+            ->where(function ($q) use ($rangeStart) {
+                $q->whereNull('ended_at')->orWhere('ended_at', '>=', $rangeStart);
             })
             ->sum(DB::raw(
-                "COALESCE(TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW())) / 3600, 0)"
+                "COALESCE(GREATEST(0, TIMESTAMPDIFF(SECOND, GREATEST(started_at, '{$rangeStart}'), LEAST(COALESCE(ended_at, NOW()), '{$rangeEnd}'))) / 3600, 0)"
             ));
     }
 
     private function unitMaintenanceHours(int $unitId, Carbon $start, Carbon $end): float
     {
+        $rangeStart = $start->copy()->startOfDay()->toDateTimeString();
+        $rangeEnd = $end->copy()->endOfDay()->toDateTimeString();
+
         return (float) UnitUtilization::where('unit_id', $unitId)
             ->whereIn('status', ['breakdown', 'servis'])
-            ->where('started_at', '<=', $end)
-            ->where(function ($q) use ($start) {
-                $q->whereNull('ended_at')->orWhere('ended_at', '>=', $start);
+            ->where('started_at', '<=', $rangeEnd)
+            ->where(function ($q) use ($rangeStart) {
+                $q->whereNull('ended_at')->orWhere('ended_at', '>=', $rangeStart);
             })
             ->sum(DB::raw(
-                "COALESCE(TIMESTAMPDIFF(SECOND, started_at, COALESCE(ended_at, NOW())) / 3600, 0)"
+                "COALESCE(GREATEST(0, TIMESTAMPDIFF(SECOND, GREATEST(started_at, '{$rangeStart}'), LEAST(COALESCE(ended_at, NOW()), '{$rangeEnd}'))) / 3600, 0)"
             ));
     }
 
@@ -281,7 +305,7 @@ class DashboardReportService
         while ($current->lte($end)) {
             $dayStr = $current->toDateString();
             $dayRitasis = $ritasis->filter(fn ($r) => $r->tanggal?->toDateString() === $dayStr);
-            $ore = (float) $dayRitasis->filter(fn ($r) => in_array($r->material->nama ?? '', $oreNames))->sum(fn ($r) => $r->quantity_tonnes);
+            $ore = (float) $dayRitasis->filter(fn ($r) => ($r->material->kategori ?? '') === 'ore' || in_array($r->material->nama ?? '', $oreNames))->sum(fn ($r) => $r->quantity_tonnes);
             $others = (float) $dayRitasis->sum(fn ($r) => $r->quantity_tonnes) - $ore;
             $cumulative += $ore + $others;
             $days[] = [
@@ -295,38 +319,41 @@ class DashboardReportService
         return $days;
     }
 
-    private function availabilityByType(Carbon $start, Carbon $end, $units, float $bdHours): array
+    private function availabilityByType(Carbon $start, Carbon $end, $units, Request $request): array
     {
         $days = (int) $start->diffInDays($end) + 1;
-        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days) {
+        $hoursPerDay = $request->filled('shift') ? 12 : 24;
+        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay) {
             $count = $typeUnits->count();
-            $sh = $count * 12 * $days;
+            $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
             foreach ($typeUnits as $u) {
                 $bd += $this->unitMaintenanceHours($u->id, $start, $end);
             }
-            $available = $sh - $bd;
-            $pct = $sh > 0 ? round(($available / $sh) * 100, 1) : 0;
+            $available = max(0.0, $sh - $bd);
+            $pct = $sh > 0 ? round(min(100.0, ($available / $sh) * 100), 1) : 0;
             return ['type' => $type, 'pct' => $pct];
         })->values()->all();
         return $byType;
     }
 
-    private function uoaByType(Carbon $start, Carbon $end, $units, $baseQ): array
+    private function uoaByType(Carbon $start, Carbon $end, $units, $baseQ, $baseNonRitasiQ, Request $request): array
     {
         $days = (int) $start->diffInDays($end) + 1;
-        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $baseQ) {
+        $hoursPerDay = $request->filled('shift') ? 12 : 24;
+        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay, $baseQ, $baseNonRitasiQ) {
             $count = $typeUnits->count();
-            $sh = $count * 12 * $days;
+            $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
             foreach ($typeUnits as $u) {
                 $bd += $this->unitMaintenanceHours($u->id, $start, $end);
             }
-            $available = $sh - $bd;
+            $available = max(0.0, $sh - $bd);
             $unitIds = $typeUnits->pluck('id');
-            $wh = (float) $baseQ()->whereIn('unit_id', $unitIds)
-                ->sum(DB::raw('LEAST(hm_total, 12)'));
-            $pct = $available > 0 ? round(($wh / $available) * 100, 1) : 0;
+            $whRitasi = (float) $baseQ()->whereIn('unit_id', $unitIds)->sum(DB::raw('LEAST(hm_total, 12)'));
+            $whNonRitasi = (float) $baseNonRitasiQ()->whereIn('unit_id', $unitIds)->sum(DB::raw('LEAST(hm_total, 12)'));
+            $wh = $whRitasi + $whNonRitasi;
+            $pct = $available > 0 ? round(min(100.0, ($wh / $available) * 100), 1) : 0;
             return ['type' => $type, 'pct' => $pct];
         })->values()->all();
         return $byType;

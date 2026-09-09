@@ -14,68 +14,149 @@ class RekapanController extends Controller
         return $query
             ->when($request->filled('tanggal_start') && $request->filled('tanggal_end'), fn ($q) => $q->whereBetween('tanggal', [$request->tanggal_start, $request->tanggal_end]))
             ->when($request->filled('tanggal_start') && ! $request->filled('tanggal_end'), fn ($q) => $q->whereDate('tanggal', $request->tanggal_start))
+            ->when(! $request->filled('tanggal_start') && $request->filled('tanggal_end'), fn ($q) => $q->whereDate('tanggal', '<=', $request->tanggal_end))
             ->when($request->filled('shift'), fn ($q) => $q->where('shift', $request->shift));
     }
 
-    private function aggregate(Request $request): array
+    private function getOperationalLogs(Request $request): array
     {
-        $ritasiAgg = $this->applyFilters(Ritasi::selectRaw('pegawai_id, COUNT(*) as total, COALESCE(SUM(hm_total), 0) as hm'), $request)
-            ->groupBy('pegawai_id')->get()->keyBy('pegawai_id');
+        $tanggalStart = $request->input('tanggal_start');
+        $tanggalEnd = $request->input('tanggal_end');
+        $shift = $request->input('shift');
+        $search = $request->input('search');
 
-        $nonRitasiAgg = $this->applyFilters(NonRitasi::selectRaw('pegawai_id, COUNT(*) as total, COALESCE(SUM(hm_total), 0) as hm')->whereNull('jam_mulai'), $request)
-            ->groupBy('pegawai_id')->get()->keyBy('pegawai_id');
+        $hasDateFilter = !empty($tanggalStart) || !empty($tanggalEnd);
 
-        $generalAgg = $this->applyFilters(NonRitasi::selectRaw('pegawai_id, COUNT(*) as total')->whereNotNull('jam_mulai'), $request)
-            ->groupBy('pegawai_id')->get()->keyBy('pegawai_id');
+        // Query Ritasi
+        $ritasiQuery = Ritasi::with(['pegawai', 'unit', 'area', 'material'])
+            ->when($tanggalStart && $tanggalEnd, fn ($q) => $q->whereBetween('tanggal', [$tanggalStart, $tanggalEnd]))
+            ->when($tanggalStart && ! $tanggalEnd, fn ($q) => $q->whereDate('tanggal', $tanggalStart))
+            ->when(! $tanggalStart && $tanggalEnd, fn ($q) => $q->whereDate('tanggal', '<=', $tanggalEnd))
+            ->when($shift, fn ($q) => $q->where('shift', $shift))
+            ->orderBy('tanggal', 'desc')
+            ->orderBy('created_at', 'desc');
 
-        return [$ritasiAgg, $nonRitasiAgg, $generalAgg];
-    }
+        // Query Non-Ritasi & General
+        $nonRitasiQuery = NonRitasi::with(['pegawai', 'unit', 'area', 'supervisor', 'seniorSpv'])
+            ->when($tanggalStart && $tanggalEnd, fn ($q) => $q->whereBetween('tanggal', [$tanggalStart, $tanggalEnd]))
+            ->when($tanggalStart && ! $tanggalEnd, fn ($q) => $q->whereDate('tanggal', $tanggalStart))
+            ->when(! $tanggalStart && $tanggalEnd, fn ($q) => $q->whereDate('tanggal', '<=', $tanggalEnd))
+            ->when($shift, fn ($q) => $q->where('shift', $shift))
+            ->orderBy('tanggal', 'desc')
+            ->orderBy('created_at', 'desc');
 
-        public function index(Request $request)
-    {
-        [$ritasiAgg, $nonRitasiAgg, $generalAgg] = $this->aggregate($request);
+        if (!empty($search)) {
+            $searchLower = '%' . strtolower($search) . '%';
+            $ritasiQuery->where(function ($q) use ($searchLower) {
+                $q->whereHas('pegawai', fn ($pq) => $pq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
+                   ->orWhereHas('unit', fn ($uq) => $uq->whereRaw('LOWER(kode) LIKE ?', [$searchLower]))
+                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
+                   ->orWhereRaw('LOWER(lokasi_pekerjaan) LIKE ?', [$searchLower]);
+            });
 
-        $rows = Pegawai::orderBy('nama')->get()->map(function ($p) use ($ritasiAgg, $nonRitasiAgg, $generalAgg) {
+            $nonRitasiQuery->where(function ($q) use ($searchLower) {
+                $q->whereHas('pegawai', fn ($pq) => $pq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
+                   ->orWhereHas('unit', fn ($uq) => $uq->whereRaw('LOWER(kode) LIKE ?', [$searchLower]))
+                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
+                   ->orWhereRaw('LOWER(lokasi_pekerjaan) LIKE ?', [$searchLower]);
+            });
+        }
+
+        // When no date filter is applied, limit query to recent 50 entries
+        if (!$hasDateFilter) {
+            $ritasiQuery->take(50);
+            $nonRitasiQuery->take(50);
+        }
+
+        $ritasis = $ritasiQuery->get()->map(function ($item) {
             return [
-                'pegawai' => $p,
-                'ritasi' => (int) ($ritasiAgg->get($p->id)->total ?? 0),
-                'ritasi_hm' => (float) ($ritasiAgg->get($p->id)->hm ?? 0),
-                'non_ritasi' => (int) ($nonRitasiAgg->get($p->id)->total ?? 0),
-                'non_ritasi_hm' => (float) ($nonRitasiAgg->get($p->id)->hm ?? 0),
-                'general' => (int) ($generalAgg->get($p->id)->total ?? 0),
+                'id' => $item->id,
+                'source_type' => 'ritasi',
+                'tipe_pekerjaan' => 'Ritasi',
+                'badge_class' => 'bg-blue-50 text-blue-700 border border-blue-200',
+                'tanggal' => $item->tanggal,
+                'shift' => $item->shift,
+                'shift_label' => $item->shift === 'siang' ? 'Day' : 'Night',
+                'pegawai' => $item->pegawai,
+                'unit_kode' => $item->unit?->kode ?? '-',
+                'unit_model' => $item->unit?->model ?? '',
+                'area_nama' => $item->area?->nama ?? ($item->lokasi_pekerjaan ?? '-'),
+                'lokasi_pekerjaan' => $item->lokasi_pekerjaan,
+                'hm_awal' => $item->hm_awal,
+                'hm_akhir' => $item->hm_akhir,
+                'hm_total' => $item->hm_total,
+                'jam_mulai' => null,
+                'jam_selesai' => null,
+                'is_overtime' => false,
+                'ritasi_count' => $item->jumlah_ritasi,
+                'quantity' => $item->quantity,
+                'quantity_unit' => $item->quantity_unit ?? 'ton',
+                'material_nama' => $item->material?->nama,
+                'deskripsi' => $item->deskripsi_pekerjaan,
+                'kendala' => $item->kendala,
+                'created_at' => $item->created_at,
             ];
         });
 
-        if ($request->filled('search')) {
-            $search = strtolower($request->search);
-            $rows = $rows->filter(fn ($r) => str_contains(strtolower($r['pegawai']->nama ?? ''), $search))->values();
+        $nonRitasis = $nonRitasiQuery->get()->map(function ($item) {
+            $isGeneral = is_null($item->unit_id);
+            return [
+                'id' => $item->id,
+                'source_type' => $isGeneral ? 'general' : 'non_ritasi',
+                'tipe_pekerjaan' => $isGeneral ? 'General' : 'Non-Ritasi',
+                'badge_class' => $isGeneral
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+                'tanggal' => $item->tanggal,
+                'shift' => $item->shift,
+                'shift_label' => $item->shift === 'siang' ? 'Day' : 'Night',
+                'pegawai' => $item->pegawai,
+                'unit_kode' => $item->unit?->kode ?? '-',
+                'unit_model' => $item->unit?->model ?? '',
+                'area_nama' => $item->area?->nama ?? ($item->lokasi_pekerjaan ?? '-'),
+                'lokasi_pekerjaan' => $item->lokasi_pekerjaan,
+                'hm_awal' => $item->hm_awal,
+                'hm_akhir' => $item->hm_akhir,
+                'hm_total' => $item->hm_total,
+                'jam_mulai' => $item->jam_mulai,
+                'jam_selesai' => $item->jam_selesai,
+                'is_overtime' => (bool)$item->is_overtime,
+                'ritasi_count' => null,
+                'quantity' => null,
+                'quantity_unit' => null,
+                'material_nama' => null,
+                'deskripsi' => $item->deskripsi_pekerjaan,
+                'kendala' => $item->kendala,
+                'created_at' => $item->created_at,
+            ];
+        });
+
+        $rows = $ritasis->concat($nonRitasis)->sortByDesc(function ($r) {
+            $t = $r['tanggal'] ? ($r['tanggal'] instanceof \Carbon\Carbon ? $r['tanggal']->format('Y-m-d') : substr((string)$r['tanggal'], 0, 10)) : '0000-00-00';
+            $s = $r['shift'] === 'malam' ? '2' : '1';
+            $c = $r['created_at'] ? $r['created_at']->format('H:i:s') : '00:00:00';
+            return $t . '_' . $s . '_' . $c;
+        })->values();
+
+        if (!$hasDateFilter) {
+            $rows = $rows->take(50);
         }
 
-        // No pagination — show all operators so there are no duplicate-name splits across pages
-        return view('rekapan.index', compact('rows'));
+        return [$rows, $tanggalStart, $tanggalEnd, $shift, $search, $hasDateFilter];
+    }
+
+    public function index(Request $request)
+    {
+        [$rows, $tanggalStart, $tanggalEnd, $shift, $search, $hasDateFilter] = $this->getOperationalLogs($request);
+
+        return view('rekapan.index', compact('rows', 'tanggalStart', 'tanggalEnd', 'shift', 'search', 'hasDateFilter'));
     }
 
     public function export(Request $request)
     {
-        [$ritasiAgg, $nonRitasiAgg, $generalAgg] = $this->aggregate($request);
+        [$rows, $tanggalStart, $tanggalEnd, $shift, $search, $hasDateFilter] = $this->getOperationalLogs($request);
 
-        $rows = Pegawai::orderBy('nama')->get()->map(function ($p) use ($ritasiAgg, $nonRitasiAgg, $generalAgg) {
-            return [
-                'pegawai' => $p,
-                'ritasi' => (int) ($ritasiAgg->get($p->id)->total ?? 0),
-                'ritasi_hm' => (float) ($ritasiAgg->get($p->id)->hm ?? 0),
-                'non_ritasi' => (int) ($nonRitasiAgg->get($p->id)->total ?? 0),
-                'non_ritasi_hm' => (float) ($nonRitasiAgg->get($p->id)->hm ?? 0),
-                'general' => (int) ($generalAgg->get($p->id)->total ?? 0),
-            ];
-        });
-
-        if ($request->filled('search')) {
-            $search = strtolower($request->search);
-            $rows = $rows->filter(fn ($r) => str_contains(strtolower($r['pegawai']->nama ?? ''), $search))->values();
-        }
-
-        $filename = "Rekapan_Operator_" . date('Y-m-d_His') . ".xls";
+        $filename = "Rekapan_Aktivitas_Operator_" . date('Y-m-d_His') . ".xls";
         $sanitized = str_replace(['"', "\r", "\n"], '', $filename);
 
         return response()->view('rekapan.export.excel', compact('rows'))
@@ -94,13 +175,13 @@ class RekapanController extends Controller
             
         $nonRitasiQuery = NonRitasi::with(['unit', 'area'])
             ->where('pegawai_id', $id)
-            ->whereNull('jam_mulai')
+            ->whereNotNull('unit_id')
             ->orderBy('tanggal', 'desc')
             ->orderBy('created_at', 'desc');
             
-        $generalQuery = NonRitasi::with(['unit', 'area'])
+        $generalQuery = NonRitasi::with(['unit', 'area', 'supervisor', 'seniorSpv'])
             ->where('pegawai_id', $id)
-            ->whereNotNull('jam_mulai')
+            ->whereNull('unit_id')
             ->orderBy('tanggal', 'desc')
             ->orderBy('created_at', 'desc');
 
@@ -108,9 +189,9 @@ class RekapanController extends Controller
         $nonRitasiQuery = $this->applyFilters($nonRitasiQuery, $request);
         $generalQuery = $this->applyFilters($generalQuery, $request);
 
-        $ritasis = $ritasiQuery->get();
-        $nonRitasis = $nonRitasiQuery->get();
-        $generals = $generalQuery->get();
+        $ritasis = $ritasiQuery->paginate(5, ['*'], 'ritasi_page')->withQueryString();
+        $nonRitasis = $nonRitasiQuery->paginate(5, ['*'], 'non_ritasi_page')->withQueryString();
+        $generals = $generalQuery->paginate(5, ['*'], 'general_page')->withQueryString();
 
         return view('rekapan.show', compact('pegawai', 'ritasis', 'nonRitasis', 'generals'));
     }

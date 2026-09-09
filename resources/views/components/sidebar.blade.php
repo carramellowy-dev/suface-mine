@@ -39,9 +39,9 @@
                 <span class="material-symbols-outlined text-xl">storage</span>
                 <span>Master Data</span>
             </a>
-         @elseif($role === 'spv')
-            <a href="{{ route("$role.dashboard.index") }}"
-               class="sidebar-nav-item {{ request()->routeIs("$role.dashboard.*") ? 'active' : '' }}">
+         @elseif($role === 'spv' || $role === 'senior_spv')
+            <a href="{{ route('spv.dashboard.index') }}"
+               class="sidebar-nav-item {{ request()->routeIs('spv.dashboard.*') ? 'active' : '' }}">
                 <span class="material-symbols-outlined text-xl">dashboard</span>
                 <span>Dashboard</span>
             </a>

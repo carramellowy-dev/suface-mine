@@ -4,6 +4,14 @@
 
 @section('content')
 
+<div class="flex items-center justify-between mb-4">
+    <p class="text-sm text-slate-500">Form pelaporan pekerjaan harian general (pekerjaan manual tanpa alat berat).</p>
+    <a href="{{ route('pegawai.general.riwayat') }}" class="btn-secondary flex items-center gap-1.5 text-xs sm:text-sm py-1.5 px-3">
+        <span class="material-symbols-outlined text-base">history</span>
+        Lihat Riwayat
+    </a>
+</div>
+
 @include('operator.partials.validation-errors')
 
 @include('operator.partials.session-info', ['description' => 'Silakan isi data pekerjaan general harian. Pastikan durasi Jam Kerja sesuai (6 - 11 Jam).'])
@@ -13,7 +21,7 @@
     
     <div class="card p-6">
         {{-- Data Dasar --}}
-        @include('operator.partials.data-dasar', ['units' => $units, 'latestStatus' => $latestStatus, 'showSupervisor' => true])
+        @include('operator.partials.data-dasar', ['showUnit' => false, 'showSupervisor' => true, 'spvs' => $spvs, 'seniorSpvs' => $seniorSpvs])
         
         {{-- Jam Kerja --}}
         <h2 class="section-title mb-4 flex items-center gap-2 pb-3 border-b">
@@ -79,13 +87,9 @@
             <button type="reset" class="btn-secondary">Reset</button>
             <button type="submit" class="btn-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">save</span>
-                Simpan Data Ritasi
-                        </button>
+                Simpan Pekerjaan General
+            </button>
         </div>
     </div>
 </form>
-
-@push('scripts')
-@include('operator.partials.unit-status-script', ['withHmCalculator' => false])
-@endpush
 @endsection

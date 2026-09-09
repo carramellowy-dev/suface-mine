@@ -31,6 +31,10 @@ class UtilizationController extends Controller
 
     public function create()
     {
+        if (auth()->user()?->role !== 'pegawai') {
+            abort(403, 'Akses ditolak. Hanya operator yang memiliki wewenang input utilization.');
+        }
+
         $units = Unit::where('is_active', true)->orderBy('kode')->get();
         $latestStatus = UnitUtilization::latestPerUnit()->pluck('status', 'unit_id');
         return view('operator.utilization.create', compact('units', 'latestStatus'));
@@ -38,6 +42,10 @@ class UtilizationController extends Controller
 
     public function store(StoreUtilizationRequest $request)
     {
+        if (auth()->user()?->role !== 'pegawai') {
+            abort(403, 'Akses ditolak. Hanya operator yang memiliki wewenang untuk mencatat atau mencabut status utilization.');
+        }
+
         $unitId = $request->unit_id;
         $status = $request->status;
         $current = UnitUtilization::active()->where('unit_id', $unitId)->latest('started_at')->first();
@@ -58,12 +66,6 @@ class UtilizationController extends Controller
                     return response()->json(['success' => true, 'replayed' => true], 200);
                 }
                 return back()->with('error', 'Tidak ada maintenance aktif untuk unit ini.');
-            }
-            if ($current->user_id !== auth()->id()) {
-                if ($request->header('X-Offline-Replay') === '1') {
-                    return response()->json(['success' => true, 'replayed' => true], 200);
-                }
-                return back()->with('error', 'Hanya operator yang melaporkan maintenance ini yang dapat menyelesaikan.');
             }
         }
 

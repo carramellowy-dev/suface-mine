@@ -14,78 +14,58 @@ class UserSeeder extends Seeder
     {
         $pegawais = Pegawai::orderBy('id')->get();
         $areas = Area::orderBy('id')->get();
+        $areaIds = $areas->pluck('id')->toArray();
 
         // 1. Admin
         User::updateOrCreate(
             ['username' => 'admin'],
             [
-                'name' => 'Administrator Utama',
+                'name' => 'Admin',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
                 'pegawai_id' => null,
             ]
         );
 
-        // 2. SPV Utama
-        $spvUtama = User::updateOrCreate(
-            ['username' => 'spv'],
-            [
-                'name' => 'Supervisor Utama',
-                'password' => Hash::make('password'),
-                'role' => 'spv',
-                'pegawai_id' => null,
-            ]
-        );
-        // SPV Utama oversees all areas
-        $spvUtama->areas()->sync($areas->pluck('id')->toArray());
-
-        // 3. SPV Lapangan (spv1 - spv4)
-        $spvConfig = [
-            ['username' => 'spv1', 'name' => 'SPV Sugiantoro (Pit)', 'pegawai_idx' => 10, 'area_kodes' => ['AREA-001', 'AREA-002', 'AREA-003', 'AREA-004']],
-            ['username' => 'spv2', 'name' => 'SPV Darmawan (Disposal & Haul)', 'pegawai_idx' => 11, 'area_kodes' => ['AREA-005', 'AREA-006', 'AREA-007', 'AREA-008']],
-            ['username' => 'spv3', 'name' => 'SPV Hendrawan (Stockpile & Crusher)', 'pegawai_idx' => 12, 'area_kodes' => ['AREA-009', 'AREA-010', 'AREA-011']],
-            ['username' => 'spv4', 'name' => 'SPV Prasetyo (Facilities & Port)', 'pegawai_idx' => 13, 'area_kodes' => ['AREA-012', 'AREA-013', 'AREA-014']],
-        ];
-
-        foreach ($spvConfig as $cfg) {
-            $pegawai = $pegawais->get($cfg['pegawai_idx']);
+        // 2. 5 Akun SPV (Supervisor)
+        $spvList = ['Sugeng', 'Darma', 'Hendro', 'Pras', 'Bayu'];
+        foreach ($spvList as $name) {
             $spv = User::updateOrCreate(
-                ['username' => $cfg['username']],
+                ['username' => strtolower($name)],
                 [
-                    'name' => $cfg['name'],
+                    'name' => $name,
                     'password' => Hash::make('password'),
                     'role' => 'spv',
-                    'pegawai_id' => $pegawai?->id,
+                    'pegawai_id' => null,
                 ]
             );
-
-            $assignedAreaIds = Area::whereIn('kode', $cfg['area_kodes'])->pluck('id')->toArray();
-            $spv->areas()->sync($assignedAreaIds);
+            $spv->areas()->sync($areaIds);
         }
 
-        // 4. Operators (operator1 - operator10)
-        $opConfig = [
-            ['username' => 'operator1', 'name' => 'Operator Budi (DT)', 'pegawai_idx' => 0],
-            ['username' => 'operator2', 'name' => 'Operator Agus (EXC)', 'pegawai_idx' => 1],
-            ['username' => 'operator3', 'name' => 'Operator Hendra (BLD)', 'pegawai_idx' => 2],
-            ['username' => 'operator4', 'name' => 'Operator Rudi (MG)', 'pegawai_idx' => 3],
-            ['username' => 'operator5', 'name' => 'Operator Joko (LOD)', 'pegawai_idx' => 4],
-            ['username' => 'operator6', 'name' => 'Operator Wawan (DT)', 'pegawai_idx' => 5],
-            ['username' => 'operator7', 'name' => 'Operator Eko (DT)', 'pegawai_idx' => 6],
-            ['username' => 'operator8', 'name' => 'Operator Ahmad (EXC)', 'pegawai_idx' => 7],
-            ['username' => 'operator9', 'name' => 'Operator Dedi (BLD)', 'pegawai_idx' => 8],
-            ['username' => 'operator10', 'name' => 'Operator Bambang (DT)', 'pegawai_idx' => 9],
-        ];
-
-        foreach ($opConfig as $cfg) {
-            $pegawai = $pegawais->get($cfg['pegawai_idx']);
-            User::updateOrCreate(
-                ['username' => $cfg['username']],
+        // 3. 5 Akun Senior SPV
+        $seniorSpvList = ['Teguh', 'Surya', 'Hadi', 'Santoso', 'Wibowo'];
+        foreach ($seniorSpvList as $name) {
+            $srSpv = User::updateOrCreate(
+                ['username' => strtolower($name)],
                 [
-                    'name' => $cfg['name'],
+                    'name' => $name,
+                    'password' => Hash::make('password'),
+                    'role' => 'senior_spv',
+                    'pegawai_id' => null,
+                ]
+            );
+            $srSpv->areas()->sync($areaIds);
+        }
+
+        // 4. 10 Akun Operator (1-to-1 dengan data Pegawai)
+        foreach ($pegawais as $pegawai) {
+            User::updateOrCreate(
+                ['username' => strtolower($pegawai->nama)],
+                [
+                    'name' => $pegawai->nama,
                     'password' => Hash::make('password'),
                     'role' => 'pegawai',
-                    'pegawai_id' => $pegawai?->id,
+                    'pegawai_id' => $pegawai->id,
                 ]
             );
         }

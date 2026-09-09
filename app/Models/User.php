@@ -40,16 +40,6 @@ class User extends Authenticatable
             : null;
     }
 
-    public function unit()
-    {
-        return $this->belongsTo(Unit::class);
-    }
-
-    public function area()
-    {
-        return $this->belongsTo(Area::class);
-    }
-
     public function areas()
     {
         return $this->belongsToMany(Area::class, 'area_spv', 'spv_id', 'area_id');
@@ -62,7 +52,12 @@ class User extends Authenticatable
 
     public function isSpv(): bool
     {
-        return $this->role === 'spv';
+        return in_array($this->role, ['spv', 'senior_spv']);
+    }
+
+    public function isSeniorSpv(): bool
+    {
+        return $this->role === 'senior_spv';
     }
 
     public function isAdmin(): bool

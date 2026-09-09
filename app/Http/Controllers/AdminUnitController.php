@@ -58,7 +58,7 @@ class AdminUnitController extends Controller
                 break;
 
             case 'user':
-                $query = User::with('area', 'pegawai');
+                $query = User::with('pegawai');
                 if ($search) {
                     $query->where(function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
