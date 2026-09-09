@@ -21,7 +21,12 @@
     
     <div class="card p-6">
         {{-- Data Dasar --}}
-        @include('operator.partials.data-dasar', ['units' => $units, 'latestStatus' => $latestStatus])
+        @include('operator.partials.data-dasar', [
+            'units' => $units,
+            'latestStatus' => $latestStatus,
+            'unitLabel' => 'Nomor Unit Dump Truck (Hauling)',
+            'unitPlaceholder' => 'Pilih Unit Dump Truck'
+        ])
         
         {{-- Hour Meter --}}
         @include('operator.partials.hour-meter')
@@ -45,11 +50,12 @@
             <div>
                 <label class="form-label">Satuan</label>
                 <select name="quantity_unit" class="form-input">
-                    <option value="ton">Ton (default)</option>
-                    <option value="cbm">CBM</option>
-                    <option value="m3">M3</option>
+                    <option value="ton" {{ old('quantity_unit', 'ton') === 'ton' ? 'selected' : '' }}>Ton (Berat)</option>
+                    <option value="bcm" {{ old('quantity_unit') === 'bcm' ? 'selected' : '' }}>BCM (Bank Cubic Meter)</option>
+                    <option value="m3" {{ old('quantity_unit') === 'm3' ? 'selected' : '' }}>M3 (Meter Kubik)</option>
+                    <option value="cbm" {{ old('quantity_unit') === 'cbm' ? 'selected' : '' }}>CBM (Cubic Meter)</option>
                 </select>
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Pilih satuan ukuran (biasanya Ton).</p>
+                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Pilih satuan muatan (otomatis terkonversi pada laporan).</p>
             </div>
         </div>
 
@@ -80,12 +86,6 @@
                         <option value="{{ $id }}">{{ $nama }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Area/lokasi tambang tempat Anda bekerja shift ini.</p>
-            </div>
-            <div class="col-span-2">
-                <label class="form-label">Lokasi Pekerjaan (Pit / Disposal)</label>
-                <input type="text" name="lokasi_pekerjaan" class="form-input" placeholder="Contoh: Pit 1 North / Disposal 1">
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Nama pit atau lokasi pembuangan/stockpile spesifik.</p>
             </div>
             <div class="col-span-2">
                 <label class="form-label">Deskripsi Pekerjaan / Kendala (Opsional)</label>

@@ -16,15 +16,16 @@
     $pa = (float)($kpi['pa'] ?? 0);
     $ua = (float)($kpi['ua'] ?? 0);
     $hasData = $tonnage > 0 || $fuel > 0;
+    $unitLabel = strtoupper($selectedUnit ?? 'ton');
 @endphp
 
 <div class="card p-6 mb-2">
     <div class="text-center mb-5">
         <div class="inline-flex items-center gap-2 mb-2">
             <span class="material-symbols-outlined text-[var(--primary)]">scale</span>
-            <p class="text-sm text-slate-500 uppercase tracking-wide font-semibold">Total Tonnage</p>
+            <p class="text-sm text-slate-500 uppercase tracking-wide font-semibold">Total Produksi</p>
         </div>
-        <p class="text-5xl font-bold text-[var(--primary)]">{{ number_format($tonnage, 0) }}<span class="text-2xl font-normal ml-2">ton</span></p>
+        <p class="text-5xl font-bold text-[var(--primary)]">{{ number_format($tonnage, 0) }}<span class="text-2xl font-normal ml-2">{{ $unitLabel }}</span></p>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-slate-100">
         <div class="text-center">
@@ -57,7 +58,7 @@
         </div>
     </div>
 </div>
-<p class="text-xs text-slate-400 mb-6 px-1">Ringkasan data operasional harian. Total tonnage adalah jumlah material yang diangkut. Fuel = bahan bakar terpakai. Active = unit aktif. Maintenance = unit dalam perbaikan. PA/UA = Physical Availability / Utilization Availability.</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Ringkasan data operasional harian. Total produksi adalah akumulasi material yang diangkut dalam satuan {{ $unitLabel }}. Fuel = bahan bakar terpakai. Active = unit aktif. Maintenance = unit dalam perbaikan. PA/UA = Physical Availability / Utilization Availability.</p>
 
 @if (!$hasData)
     <div class="card p-4 mb-6 bg-amber-50 border border-amber-200">
@@ -81,7 +82,7 @@
         <div class="flex items-center justify-center h-32 text-sm text-slate-400">Belum ada data hauling hari ini</div>
     @endif
 </div>
-<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang horizontal menunjukkan jumlah tonase tiap jenis material yang diangkut hari ini. Semakin panjang batang, semakin banyak material tersebut diangkut.</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang horizontal menunjukkan jumlah produksi tiap jenis material yang diangkut hari ini dalam satuan {{ $unitLabel }}. Semakin panjang batang, semakin banyak material tersebut diangkut.</p>
 
 <div class="card p-4 mb-2">
     <div class="flex items-center gap-2 mb-4">
@@ -192,7 +193,7 @@
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">UNIT</th>
                     <th class="px-4 py-2 text-left text-xs font-semibold text-slate-600">MATERIAL</th>
                     <th class="px-4 py-2 text-right text-xs font-semibold text-slate-600">HM</th>
-                    <th class="px-4 py-2 text-right text-xs font-semibold text-slate-600">TON</th>
+                    <th class="px-4 py-2 text-right text-xs font-semibold text-slate-600">QTY ({{ $unitLabel }})</th>
                     <th class="px-4 py-2 text-right text-xs font-semibold text-slate-600">FUEL</th>
                 </tr>
             </thead>
@@ -204,7 +205,12 @@
                         <td class="px-4 py-2 text-sm font-mono">{{ $r->unit->kode ?? '-' }}</td>
                         <td class="px-4 py-2 text-sm">{{ $r->material->nama ?? '-' }}</td>
                         <td class="px-4 py-2 text-sm text-right">{{ number_format((float)($r->hm_total ?? 0), 1) }}</td>
-                        <td class="px-4 py-2 text-sm text-right">{{ number_format((float)($r->quantity_tonnes ?? 0), 2) }}</td>
+                        <td class="px-4 py-2 text-sm text-right font-medium">
+                            {{ number_format((float)($r->quantityInUnit($selectedUnit ?? 'ton')), 2) }}
+                            @if(strtolower($r->quantity_unit ?? 'ton') !== strtolower($selectedUnit ?? 'ton'))
+                                <span class="block text-[11px] text-slate-400 font-normal">asli: {{ number_format((float)($r->quantity ?? 0), 1) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</span>
+                            @endif
+                        </td>
                         <td class="px-4 py-2 text-sm text-right">{{ number_format((float)($r->fuel_consumption ?? 0), 1) }}</td>
                     </tr>
                 @empty
@@ -215,7 +221,7 @@
     </div>
     <div class="p-4 border-t">{{ $hauling->links() }}</div>
 </div>
-<p class="text-xs text-slate-400 mb-6 px-1">Daftar seluruh catatan hauling (pengangkutan material) hari ini. Setiap baris menunjukkan tanggal, shift, unit, jenis material, HM (hour meter), tonase, dan konsumsi bahan bakar.</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Daftar seluruh catatan hauling (pengangkutan material) hari ini. Setiap baris menunjukkan tanggal, shift, unit, jenis material, HM (hour meter), jumlah produksi ({{ $unitLabel }}), dan konsumsi bahan bakar.</p>
 
 @push('scripts')
 <script>

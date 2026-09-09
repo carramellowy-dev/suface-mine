@@ -12,7 +12,7 @@
         <div class="flex items-center gap-3 mb-4">
             <span class="material-symbols-outlined text-[var(--primary)] text-xl">bar_chart</span>
             <span class="text-sm text-slate-500">Weekly All Hauling</span>
-            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }}</span>
+            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} <span class="text-base font-normal">{{ strtoupper($selectedUnit ?? 'ton') }}</span></span>
         </div>
         @if (count($haulingByMaterial) > 0)
             <div class="relative" style="height: {{ count($haulingByMaterial) * 36 + 40 }}px;">
@@ -69,7 +69,7 @@
         </div>
     </div>
 </div>
-<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang = total tonase mingguan per material. Gauge = persentase Availability (ketersediaan unit) dan UoA (unit benar-benar bekerja) per tipe unit. Warna hijau &ge;80% (baik), kuning 50&ndash;79% (kurang), merah &lt;50% (rendah).</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang = total produksi mingguan per material ({{ strtoupper($selectedUnit ?? 'ton') }}). Gauge = persentase Availability (ketersediaan unit) dan UoA (unit benar-benar bekerja) per tipe unit. Warna hijau &ge;80% (baik), kuning 50&ndash;79% (kurang), merah &lt;50% (rendah).</p>
 
 <div class="card p-4 mb-6">
     <div class="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500">

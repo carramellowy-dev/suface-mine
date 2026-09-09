@@ -1,4 +1,4 @@
-﻿@extends('layouts.app', ['headerTitle' => 'Riwayat Ritasi'])
+@extends('layouts.app', ['headerTitle' => 'Riwayat Ritasi'])
 
 @section('title', 'Riwayat Ritasi')
 
@@ -50,8 +50,13 @@
                     <td class="px-4 py-3">{{ $r->material->nama ?? '-' }}</td>
                     <td class="px-4 py-3">{{ number_format($r->hm_awal, 1) }}</td>
                     <td class="px-4 py-3">{{ number_format($r->hm_akhir, 1) }}</td>
-                    <td class="px-4 py-3">{{ number_format($r->hm_total, 1) }}</td>
-                    <td class="px-4 py-3">{{ $r->jumlah_ritasi }}</td>
+                    <td class="px-4 py-3 font-mono font-medium">{{ number_format($r->hm_total, 1) }}</td>
+                    <td class="px-4 py-3">
+                        <span class="font-semibold">{{ $r->jumlah_ritasi }} Rit</span>
+                        @if($r->quantity)
+                            <span class="block text-xs text-slate-500">{{ number_format($r->quantity, 1) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</span>
+                        @endif
+                    </td>
                     <td class="px-4 py-3">
                         <span class="badge {{ $r->status_badge }}">{{ ucfirst(str_replace('_', ' ', $r->status)) }}</span>
                     </td>

@@ -75,7 +75,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TANGGAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SHIFT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">UNIT</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA & LOKASI</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA KERJA</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">MATERIAL</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AWAL</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AKHIR</th>
@@ -92,16 +92,18 @@
                         <td class="px-4 py-3 text-sm font-mono font-medium">{{ $r->unit->kode ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">
                             <div class="font-medium text-slate-800">{{ $r->area->nama ?? '-' }}</div>
-                            @if($r->lokasi_pekerjaan)
-                                <div class="text-xs text-slate-500">{{ $r->lokasi_pekerjaan }}</div>
-                            @endif
                         </td>
                         <td class="px-4 py-3 text-sm">{{ $r->material->nama ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($r->hm_awal, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($r->hm_akhir, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-medium text-[var(--primary)]">{{ number_format($r->hm_total, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-semibold">{{ $r->jumlah_ritasi }}</td>
-                        <td class="px-4 py-3 text-sm text-right">{{ number_format($r->quantity, 2) }} {{ $r->quantity_unit }}</td>
+                        <td class="px-4 py-3 text-sm text-right">
+                            <div class="font-medium text-slate-800">{{ number_format($r->quantity, 2) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</div>
+                            @if(($r->quantity_unit ?? 'ton') !== 'ton')
+                                <div class="text-[11px] text-slate-400">≈ {{ number_format($r->quantity_tonnes, 2) }} Ton</div>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
@@ -137,7 +139,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SHIFT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">UNIT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">LOKASI / AKTIVITAS</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AKTIVITAS / KETERANGAN</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AWAL</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">HM AKHIR</th>
                     <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">TOTAL HM</th>
@@ -151,8 +153,7 @@
                         <td class="px-4 py-3 text-sm font-mono font-medium">{{ $nr->unit->kode ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">{{ $nr->area->nama ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">
-                            <div class="font-medium text-slate-800">{{ $nr->lokasi_pekerjaan }}</div>
-                            <div class="text-xs text-slate-500">{{ $nr->deskripsi_pekerjaan }}</div>
+                            <div class="text-sm text-slate-700">{{ $nr->deskripsi_pekerjaan ?? '-' }}</div>
                         </td>
                         <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($nr->hm_awal, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-mono">{{ number_format($nr->hm_akhir, 1) }}</td>
@@ -191,7 +192,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TANGGAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SHIFT</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AREA</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">LOKASI / AKTIVITAS</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">AKTIVITAS / KETERANGAN</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">JAM MULAI</th>
                     <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">JAM SELESAI</th>
                 </tr>
@@ -203,8 +204,7 @@
                         <td class="px-4 py-3 text-sm">{{ ucfirst($gen->shift) }}</td>
                         <td class="px-4 py-3 text-sm">{{ $gen->area->nama ?? '-' }}</td>
                         <td class="px-4 py-3 text-sm">
-                            <div class="font-medium text-slate-800">{{ $gen->lokasi_pekerjaan }}</div>
-                            <div class="text-xs text-slate-500">{{ $gen->deskripsi_pekerjaan }}</div>
+                            <div class="text-sm text-slate-700">{{ $gen->deskripsi_pekerjaan ?? '-' }}</div>
                             @if($gen->supervisor || $gen->seniorSpv)
                                 <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-2">
                                     @if($gen->supervisor)

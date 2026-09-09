@@ -22,11 +22,11 @@ class DashboardController extends Controller
 
     public function export(Request $request, DashboardReportService $reports)
     {
-        $period = $request->query('period', 'daily');
+        $period = $request->query('period', $request->query('tab', 'daily'));
         $data = $reports->exportData($request, $period);
 
         if ($request->query('format') === 'pdf') {
-            return response()->view('dashboard.export.pdf', $data);
+            return view('dashboard.export.pdf', $data + ['headerDate' => $data['periodLabel'] ?? '', 'period' => $period]);
         }
 
         $filename = 'PA-UA_' . $period . '_' . now()->format('Ymd_His') . '.xls';

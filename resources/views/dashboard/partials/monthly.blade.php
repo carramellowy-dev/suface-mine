@@ -9,7 +9,7 @@
         <div class="flex items-center gap-3 mb-6">
             <span class="material-symbols-outlined text-[var(--primary)] text-xl">bar_chart</span>
             <span class="text-sm text-slate-500">All Material Hauling</span>
-            <span class="text-3xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }}</span>
+            <span class="text-3xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} <span class="text-xl font-normal">{{ strtoupper($selectedUnit ?? 'ton') }}</span></span>
         </div>
         <div class="relative" style="height: 400px;">
             <canvas id="monthlyChart"></canvas>
@@ -20,7 +20,7 @@
         <div class="flex items-center gap-3 mb-4">
             <span class="material-symbols-outlined text-[var(--primary)] text-xl">bar_chart</span>
             <span class="text-sm text-slate-500">Monthly Target Hauling</span>
-            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} ton</span>
+            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} {{ strtoupper($selectedUnit ?? 'ton') }}</span>
         </div>
         @if (count($materialChart['names']) > 0)
             <div class="relative" style="height: {{ count($materialChart['names']) * 36 + 40 }}px;">
@@ -32,7 +32,7 @@
     </div>
 </div>
 
-<p class="text-xs text-slate-400 mb-6 px-1">Grafik kombinasi batang + garis. Batang gelap = tonase ore harian, batang terang = tonase lainnya. Garis = total kumulatif dari awal bulan. Kiri = tonase harian, kanan = tonase kumulatif.</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Grafik kombinasi batang + garis. Batang gelap = produksi ore harian ({{ strtoupper($selectedUnit ?? 'ton') }}), batang terang = produksi lainnya. Garis = total kumulatif dari awal bulan. Kiri = produksi harian, kanan = produksi kumulatif.</p>
 
 @push('scripts')
 <script>

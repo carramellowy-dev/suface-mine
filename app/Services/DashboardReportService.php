@@ -38,14 +38,19 @@ class DashboardReportService
         $data = $this->build($start, $end, $period, $request);
         $rows = Ritasi::whereBetween('tanggal', [$start->toDateString(), $end->toDateString()])
             ->when($request->filled('shift'), fn ($q) => $q->where('shift', $request->shift))
-            ->with(['unit', 'material', 'pegawai'])
+            ->with(['unit', 'material', 'pegawai', 'area'])
             ->orderBy('tanggal', 'desc')->orderBy('shift')
             ->get();
-        return [
-            'kpi'  => $data['kpi'],
-            'rows' => $rows,
-            'meta' => ['period' => $period, 'start' => $start->toDateString(), 'end' => $end->toDateString()],
-        ];
+        return array_merge($data, [
+            'rows'         => $rows,
+            'selectedUnit' => $data['selectedUnit'] ?? 'ton',
+            'meta'         => [
+                'period' => $period,
+                'start'  => $start->toDateString(),
+                'end'    => $end->toDateString(),
+                'unit'   => $data['selectedUnit'] ?? 'ton',
+            ],
+        ]);
     }
 
     public function activeUnitCount(Carbon $at): int
@@ -106,12 +111,17 @@ class DashboardReportService
             ->sum(DB::raw('COALESCE(non_ritasis.fuel_consumption, units.fuel_consumption_rate * non_ritasis.hm_total)'));
         $fuel = $fuelRitasi + $fuelNonRitasi;
 
+        $selectedUnit = strtolower((string) $request->query('unit', 'ton'));
+        if (!in_array($selectedUnit, ['ton', 'bcm', 'm3', 'cbm'])) {
+            $selectedUnit = 'ton';
+        }
+
         $ritasis = $baseQ()->with('material')->get();
-        $tonnage = (float) $ritasis->sum(fn ($r) => $r->quantity_tonnes);
+        $tonnage = (float) $ritasis->sum(fn ($r) => $r->quantityInUnit($selectedUnit));
 
         $pies = [
-            'day'    => (float) $ritasis->where('shift', 'siang')->sum(fn ($r) => $r->quantity_tonnes),
-            'night'  => (float) $ritasis->where('shift', 'malam')->sum(fn ($r) => $r->quantity_tonnes),
+            'day'    => (float) $ritasis->where('shift', 'siang')->sum(fn ($r) => $r->quantityInUnit($selectedUnit)),
+            'night'  => (float) $ritasis->where('shift', 'malam')->sum(fn ($r) => $r->quantityInUnit($selectedUnit)),
         ];
         $pies['combined'] = $pies['day'] + $pies['night'];
 
@@ -170,7 +180,7 @@ class DashboardReportService
             ->orderBy('tanggal', 'desc')->orderBy('shift')->paginate(15);
 
         $haulingByMaterial = $ritasis->groupBy(fn ($r) => $r->material->nama ?? 'Lainnya')
-            ->map(fn ($items) => round((float) $items->sum(fn ($r) => $r->quantity_tonnes), 2))
+            ->map(fn ($items) => round((float) $items->sum(fn ($r) => $r->quantityInUnit($selectedUnit)), 2))
             ->sortDesc()->all();
 
         // Daily target per material (period-aware: harian/mingguan/bulanan)
@@ -199,7 +209,7 @@ class DashboardReportService
         ];
 
         $oreNames = ['Bauxite Ore (Raw)', 'Processed Alumina', 'Pasir Hitam', 'Mining Tuff', 'Batu Pica (5/15)', 'Tuff Off', 'KCN', 'Cake', 'DSTuff'];
-        $dailyOreOthers = $this->dailyOreOthers($start, $end, $ritasis, $oreNames);
+        $dailyOreOthers = $this->dailyOreOthers($start, $end, $ritasis, $oreNames, $selectedUnit);
 
         $availability = $this->availabilityByType($start, $end, $units, $request);
         $uoa = $this->uoaByType($start, $end, $units, $baseQ, $baseNonRitasiQ, $request);
@@ -208,6 +218,7 @@ class DashboardReportService
             'kpi' => [
                 'fuel'             => round($fuel, 2),
                 'tonnage'          => round($tonnage, 2),
+                'selected_unit'    => $selectedUnit,
                 'active_units'     => $unitCount - $this->maintenanceUnitCount($end),
                 'maintenance_units'=> $this->maintenanceUnitCount($end),
                 'pa'               => round($pa, 2),
@@ -216,6 +227,8 @@ class DashboardReportService
                 'wh'               => round($wh, 2),
                 'bd'               => round($bd, 2),
             ],
+            'selectedUnit'      => $selectedUnit,
+            'supportedUnits'    => ['ton' => 'Ton', 'bcm' => 'BCM', 'm3' => 'M³', 'cbm' => 'CBM'],
             'pies'              => $pies,
             'hauling'           => $hauling,
             'timeline'          => $timelineSiang,
@@ -297,7 +310,7 @@ class DashboardReportService
         };
     }
 
-    private function dailyOreOthers(Carbon $start, Carbon $end, $ritasis, array $oreNames): array
+    private function dailyOreOthers(Carbon $start, Carbon $end, $ritasis, array $oreNames, string $selectedUnit = 'ton'): array
     {
         $days = [];
         $cumulative = 0;
@@ -305,8 +318,8 @@ class DashboardReportService
         while ($current->lte($end)) {
             $dayStr = $current->toDateString();
             $dayRitasis = $ritasis->filter(fn ($r) => $r->tanggal?->toDateString() === $dayStr);
-            $ore = (float) $dayRitasis->filter(fn ($r) => ($r->material->kategori ?? '') === 'ore' || in_array($r->material->nama ?? '', $oreNames))->sum(fn ($r) => $r->quantity_tonnes);
-            $others = (float) $dayRitasis->sum(fn ($r) => $r->quantity_tonnes) - $ore;
+            $ore = (float) $dayRitasis->filter(fn ($r) => ($r->material->kategori ?? '') === 'ore' || in_array($r->material->nama ?? '', $oreNames))->sum(fn ($r) => $r->quantityInUnit($selectedUnit));
+            $others = (float) $dayRitasis->sum(fn ($r) => $r->quantityInUnit($selectedUnit)) - $ore;
             $cumulative += $ore + $others;
             $days[] = [
                 'date'       => $current->format('d M'),

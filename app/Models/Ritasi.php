@@ -20,7 +20,6 @@ class Ritasi extends Model
         'hm_akhir',
         'hm_total',
         'jumlah_ritasi',
-        'lokasi_pekerjaan',
         'deskripsi_pekerjaan',
         'status',
         'fuel_consumption',
@@ -77,10 +76,44 @@ class Ritasi extends Model
         return $this->shift === 'siang' ? 'Day' : 'Night';
     }
 
+    public function quantityInUnit(string $targetUnit = 'ton'): float
+    {
+        if ($this->quantity === null) {
+            return 0.0;
+        }
+
+        $inputUnit = strtolower(trim($this->quantity_unit ?? 'ton'));
+        $targetUnit = strtolower(trim($targetUnit));
+        $qty = (float) $this->quantity;
+
+        if ($inputUnit === $targetUnit) {
+            return $qty;
+        }
+
+        $density = (float) ($this->material?->to_ton_factor ?: 1.0);
+        if ($density <= 0) {
+            $density = 1.0;
+        }
+
+        // Konversi ke Ton sebagai basis
+        $tonValue = in_array($inputUnit, ['bcm', 'cbm', 'm3'])
+            ? ($qty * $density)
+            : $qty;
+
+        if ($targetUnit === 'ton') {
+            return $tonValue;
+        }
+
+        // Konversi dari Ton ke volume (bcm, cbm, m3)
+        if (in_array($targetUnit, ['bcm', 'cbm', 'm3'])) {
+            return $tonValue / $density;
+        }
+
+        return $qty;
+    }
+
     public function getQuantityTonnesAttribute(): float
     {
-        if ($this->quantity === null) return 0.0;
-        if ($this->quantity_unit === 'ton') return (float) $this->quantity;
-        return (float) ($this->quantity * ($this->material?->to_ton_factor ?? 1));
+        return $this->quantityInUnit('ton');
     }
 }
