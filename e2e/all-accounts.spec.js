@@ -85,7 +85,7 @@ for (const acc of accounts) {
         await expect(page.getByText('Mingguan').first()).toBeVisible();
         await expect(page.getByText('Bulanan').first()).toBeVisible();
         await page.goto('/admin/dashboard?tab=monthly');
-        await expect(page.locator('body')).toContainText(/Monthly Target Hauling|All Material Hauling/i);
+        await expect(page.locator('body')).toContainText(/All Material Hauling/i);
 
         // Master Data - unit
         await page.goto('/admin/master-data?tab=unit');

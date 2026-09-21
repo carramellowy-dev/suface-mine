@@ -99,9 +99,9 @@
                         <td class="px-4 py-3 text-sm text-right font-medium text-[var(--primary)]">{{ number_format($r->hm_total, 1) }}</td>
                         <td class="px-4 py-3 text-sm text-right font-semibold">{{ $r->jumlah_ritasi }}</td>
                         <td class="px-4 py-3 text-sm text-right">
-                            <div class="font-medium text-slate-800">{{ number_format($r->quantity, 2) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</div>
-                            @if(($r->quantity_unit ?? 'ton') !== 'ton')
-                                <div class="text-[11px] text-slate-400">≈ {{ number_format($r->quantity_tonnes, 2) }} Ton</div>
+                            <div class="font-medium text-slate-800">{{ number_format($r->quantityInUnit('m3'), 2) }} M3</div>
+                            @if(($r->quantity_unit ?? 'm3') !== 'm3')
+                                <div class="text-[11px] text-slate-400">asli: {{ number_format($r->quantity, 2) }} {{ strtoupper($r->quantity_unit ?? '') }}</div>
                             @endif
                         </td>
                     </tr>

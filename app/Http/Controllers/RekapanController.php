@@ -90,7 +90,7 @@ class RekapanController extends Controller
                 'is_overtime' => false,
                 'ritasi_count' => $item->jumlah_ritasi,
                 'quantity' => $item->quantity,
-                'quantity_unit' => $item->quantity_unit ?? 'ton',
+                'quantity_unit' => $item->quantity_unit ?? 'm3',
                 'material_nama' => $item->material?->nama,
                 'deskripsi' => $item->deskripsi_pekerjaan,
                 'kendala' => $item->kendala,

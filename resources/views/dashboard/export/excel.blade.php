@@ -2,8 +2,8 @@
     $kpi  = $kpi ?? [];
     $meta = $meta ?? [];
     $rows = $rows ?? collect();
-    $targetUnit = strtolower($selectedUnit ?? $meta['unit'] ?? 'ton');
-    $unitLabel = strtoupper($targetUnit);
+    $targetUnit = 'm3';
+    $unitLabel = 'M3';
 @endphp
 <!DOCTYPE html>
 <html lang="id"><head>
@@ -47,7 +47,7 @@
                 <td class="num">{{ number_format((float)($r->hm_total ?? 0), 2) }}</td>
                 <td class="num">{{ number_format((float)($r->quantityInUnit($targetUnit)), 2) }}</td>
                 <td class="num">{{ number_format((float)($r->quantity ?? 0), 2) }}</td>
-                <td>{{ strtoupper($r->quantity_unit ?? 'ton') }}</td>
+                <td>{{ strtoupper($r->quantity_unit ?? 'm3') }}</td>
                 <td class="num">{{ number_format((float)($r->fuel_consumption ?? 0), 2) }}</td>
             </tr>
             @empty

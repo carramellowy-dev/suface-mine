@@ -35,7 +35,7 @@ class AdminMaterialController extends Controller
         $validated = $request->validate([
             'kode' => 'required|string|unique:materials,kode',
             'nama' => 'required|string',
-            'satuan' => 'required|string',
+            'satuan' => 'nullable|string',
             'kategori' => 'required|in:ore,waste,fuel,lubricant,explosive,spare_part,other',
             'stok' => 'required|numeric|min:0',
             'stok_minimal' => 'required|numeric|min:0',
@@ -43,6 +43,10 @@ class AdminMaterialController extends Controller
             'status' => 'required|in:active,low_stock,inactive,restricted',
             'keterangan' => 'nullable|string',
         ]);
+
+        // Satuan utama paten: meter kubik (M3)
+        $validated['satuan'] = 'M3';
+        $validated['unit_default'] = 'm3';
 
         Material::create($validated);
 
@@ -60,7 +64,7 @@ class AdminMaterialController extends Controller
         $validated = $request->validate([
             'kode' => 'required|string|unique:materials,kode,' . $material->id,
             'nama' => 'required|string',
-            'satuan' => 'required|string',
+            'satuan' => 'nullable|string',
             'kategori' => 'required|in:ore,waste,fuel,lubricant,explosive,spare_part,other',
             'stok' => 'required|numeric|min:0',
             'stok_minimal' => 'required|numeric|min:0',
@@ -68,6 +72,10 @@ class AdminMaterialController extends Controller
             'status' => 'required|in:active,low_stock,inactive,restricted',
             'keterangan' => 'nullable|string',
         ]);
+
+        // Satuan utama paten: meter kubik (M3)
+        $validated['satuan'] = 'M3';
+        $validated['unit_default'] = 'm3';
 
         $material->update($validated);
 

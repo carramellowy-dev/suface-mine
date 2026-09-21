@@ -58,7 +58,14 @@ async function serializeForm(form) {
         }
     }
 
-    return { payload: Object.fromEntries(formData.entries()), files };
+    // Dukung input array (name="...[]") agar baris dinamis tidak hilang saat offline.
+    const payload = {};
+    for (const key of new Set(formData.keys())) {
+        const values = formData.getAll(key);
+        payload[key] = values.length > 1 ? values : values[0];
+    }
+
+    return { payload, files };
 }
 
 async function saveOutbox(item) {
@@ -100,7 +107,11 @@ async function replayOutbox() {
             formData.append('_token', token);
 
             for (const [key, value] of Object.entries(item.payload || {})) {
-                formData.append(key, value);
+                if (Array.isArray(value)) {
+                    for (const v of value) formData.append(key, v);
+                } else {
+                    formData.append(key, value);
+                }
             }
 
             for (const file of item.files || []) {

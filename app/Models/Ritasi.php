@@ -17,6 +17,7 @@ class Ritasi extends Model
         'shift',
         'tanggal',
         'hm_awal',
+        'hm_mulai_kerja',
         'hm_akhir',
         'hm_total',
         'jumlah_ritasi',
@@ -30,6 +31,7 @@ class Ritasi extends Model
     protected $casts = [
         'tanggal' => 'date',
         'hm_awal' => 'decimal:2',
+        'hm_mulai_kerja' => 'decimal:2',
         'hm_akhir' => 'decimal:2',
         'hm_total' => 'decimal:2',
         'jumlah_ritasi' => 'integer',
@@ -76,13 +78,13 @@ class Ritasi extends Model
         return $this->shift === 'siang' ? 'Day' : 'Night';
     }
 
-    public function quantityInUnit(string $targetUnit = 'ton'): float
+    public function quantityInUnit(string $targetUnit = 'm3'): float
     {
         if ($this->quantity === null) {
             return 0.0;
         }
 
-        $inputUnit = strtolower(trim($this->quantity_unit ?? 'ton'));
+        $inputUnit = strtolower(trim($this->quantity_unit ?? 'm3'));
         $targetUnit = strtolower(trim($targetUnit));
         $qty = (float) $this->quantity;
 

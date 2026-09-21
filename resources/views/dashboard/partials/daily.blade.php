@@ -4,7 +4,7 @@
     $haulingByMaterial = $haulingByMaterial ?? [];
     $timelineSiang = $timelineSiang ?? [];
     $timelineMalam = $timelineMalam ?? [];
-    $timelineAvg = $timelineAvg ?? ['siang' => ['red' => 0, 'green' => 0, 'white' => 0], 'malam' => ['red' => 0, 'green' => 0, 'white' => 0], 'combined' => ['red' => 0, 'green' => 0, 'white' => 0]];
+    $timelineAvg = $timelineAvg ?? ['siang' => ['red' => 0, 'green' => 0, 'white' => 0], 'malam' => ['red' => 0, 'green' => 0, 'white' => 0]];
     $timelineGrouped = $timelineGrouped ?? [];
 @endphp
 
@@ -16,7 +16,7 @@
     $pa = (float)($kpi['pa'] ?? 0);
     $ua = (float)($kpi['ua'] ?? 0);
     $hasData = $tonnage > 0 || $fuel > 0;
-    $unitLabel = strtoupper($selectedUnit ?? 'ton');
+    $unitLabel = 'M3';
 @endphp
 
 <div class="card p-6 mb-2">
@@ -90,14 +90,7 @@
         <h2 class="section-title">Timeline Pemakaian Unit</h2>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div class="text-center">
-            <p class="text-sm font-semibold text-slate-600 mb-2">Rata-rata per Unit</p>
-            <div class="relative inline-block" style="width:160px;height:160px;">
-                <canvas id="avgCombined"></canvas>
-            </div>
-            <p class="text-xs text-slate-500 mt-1">Gabungan (Siang + Malam)</p>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div class="text-center">
             <p class="text-sm font-semibold text-slate-600 mb-2">Shift Siang</p>
             <div class="relative inline-block" style="width:160px;height:160px;">
@@ -206,9 +199,9 @@
                         <td class="px-4 py-2 text-sm">{{ $r->material->nama ?? '-' }}</td>
                         <td class="px-4 py-2 text-sm text-right">{{ number_format((float)($r->hm_total ?? 0), 1) }}</td>
                         <td class="px-4 py-2 text-sm text-right font-medium">
-                            {{ number_format((float)($r->quantityInUnit($selectedUnit ?? 'ton')), 2) }}
-                            @if(strtolower($r->quantity_unit ?? 'ton') !== strtolower($selectedUnit ?? 'ton'))
-                                <span class="block text-[11px] text-slate-400 font-normal">asli: {{ number_format((float)($r->quantity ?? 0), 1) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</span>
+                            {{ number_format((float)($r->quantityInUnit('m3')), 2) }}
+                            @if(strtolower($r->quantity_unit ?? 'm3') !== 'm3')
+                                <span class="block text-[11px] text-slate-400 font-normal">asli: {{ number_format((float)($r->quantity ?? 0), 1) }} {{ strtoupper($r->quantity_unit ?? 'M3') }}</span>
                             @endif
                         </td>
                         <td class="px-4 py-2 text-sm text-right">{{ number_format((float)($r->fuel_consumption ?? 0), 1) }}</td>
@@ -340,7 +333,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    renderDonut('avgCombined', {!! json_encode($timelineAvg['combined']) !!});
     renderDonut('avgSiang', {!! json_encode($timelineAvg['siang']) !!});
     renderDonut('avgMalam', {!! json_encode($timelineAvg['malam']) !!});
     showShift('siang');

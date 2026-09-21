@@ -34,7 +34,9 @@
                     <th class="px-4 py-3 text-left">Shift</th>
                     <th class="px-4 py-3 text-left">Unit</th>
                     <th class="px-4 py-3 text-left">Material</th>
+                    <th class="px-4 py-3 text-left">Area</th>
                     <th class="px-4 py-3 text-left">HM Awal</th>
+                    <th class="px-4 py-3 text-left">HM Mulai</th>
                     <th class="px-4 py-3 text-left">HM Akhir</th>
                     <th class="px-4 py-3 text-left">Total</th>
                     <th class="px-4 py-3 text-left">Ritasi</th>
@@ -48,13 +50,15 @@
                     <td class="px-4 py-3">{{ $r->shift === 'siang' ? 'Day' : 'Night' }}</td>
                     <td class="px-4 py-3">{{ $r->unit->kode ?? '-' }}</td>
                     <td class="px-4 py-3">{{ $r->material->nama ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $r->area->nama ?? '-' }}</td>
                     <td class="px-4 py-3">{{ number_format($r->hm_awal, 1) }}</td>
+                    <td class="px-4 py-3">{{ $r->hm_mulai_kerja !== null ? number_format($r->hm_mulai_kerja, 1) : '-' }}</td>
                     <td class="px-4 py-3">{{ number_format($r->hm_akhir, 1) }}</td>
                     <td class="px-4 py-3 font-mono font-medium">{{ number_format($r->hm_total, 1) }}</td>
                     <td class="px-4 py-3">
                         <span class="font-semibold">{{ $r->jumlah_ritasi }} Rit</span>
                         @if($r->quantity)
-                            <span class="block text-xs text-slate-500">{{ number_format($r->quantity, 1) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}</span>
+                            <span class="block text-xs text-slate-500">{{ number_format($r->quantityInUnit('m3'), 1) }} M3</span>
                         @endif
                     </td>
                     <td class="px-4 py-3">
@@ -62,7 +66,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="9" class="px-4 py-8 text-center text-slate-400">Tidak ada data</td></tr>
+                <tr><td colspan="11" class="px-4 py-8 text-center text-slate-400">Tidak ada data</td></tr>
                 @endforelse
             </tbody>
         </table>

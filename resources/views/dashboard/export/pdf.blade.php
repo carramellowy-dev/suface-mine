@@ -44,8 +44,8 @@
 
 @section('content')
 @php
-    $targetUnit = strtolower($selectedUnit ?? $meta['unit'] ?? 'ton');
-    $unitLabel = strtoupper($targetUnit);
+    $targetUnit = 'm3';
+    $unitLabel = 'M3';
     $period = $meta['period'] ?? 'daily';
     $periodTitle = match($period) {
         'weekly' => 'Mingguan (Weekly)',
@@ -60,11 +60,11 @@
     $ua = (float)($kpi['ua'] ?? 0);
     $materialChart = $materialChart ?? ['names' => [], 'tonnage' => [], 'target' => [], 'actualRitasi' => [], 'gap' => []];
     $haulingByMaterial = $haulingByMaterial ?? [];
-    $timelineAvg = $timelineAvg ?? ['siang' => ['red' => 0, 'green' => 0, 'white' => 0], 'malam' => ['red' => 0, 'green' => 0, 'white' => 0], 'combined' => ['red' => 0, 'green' => 0, 'white' => 0]];
+    $timelineAvg = $timelineAvg ?? ['siang' => ['red' => 0, 'green' => 0, 'white' => 0], 'malam' => ['red' => 0, 'green' => 0, 'white' => 0]];
     $availability = $availability ?? [];
     $uoa = $uoa ?? [];
     $dailyOreOthers = $dailyOreOthers ?? [];
-    $typeShort = ['excavator' => 'Exc', 'dump_truck' => 'DT', 'bulldozer' => 'Dozer', 'loader' => 'LV', 'motor_grader' => 'MG'];
+    $typeShort = ['excavator' => 'Exa', 'dump_truck' => 'ADT', 'bulldozer' => 'Dozr', 'loader' => 'Sany'];
 @endphp
 
 {{-- Toolbar Atas (Hanya tampil di layar, tersembunyi saat dicetak) --}}
@@ -196,14 +196,7 @@
                         </div>
                         <span class="text-[11px] text-slate-500">Maintenance / In Use / Standby</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center pt-2">
-                        <div>
-                            <div class="relative inline-block" style="width:110px;height:110px;">
-                                <canvas id="pdfAvgCombined"></canvas>
-                            </div>
-                            <p class="text-[11px] font-bold text-slate-700 mt-1">Gabungan</p>
-                            <p class="text-[10px] text-slate-400">Siang + Malam</p>
-                        </div>
+                    <div class="grid grid-cols-2 gap-2 text-center pt-2">
                         <div>
                             <div class="relative inline-block" style="width:110px;height:110px;">
                                 <canvas id="pdfAvgSiang"></canvas>
@@ -255,7 +248,7 @@
                             <span class="material-symbols-outlined text-base text-[var(--primary)]">speed</span>
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Availability per Tipe Unit</h4>
                         </div>
-                        <div class="grid grid-cols-5 gap-1.5 text-center">
+                        <div class="grid grid-cols-4 gap-1.5 text-center">
                             @foreach ($availability as $a)
                                 @php
                                     $label = $typeShort[$a['type']] ?? $a['type'];
@@ -276,7 +269,7 @@
                             <span class="material-symbols-outlined text-base text-[var(--primary)]">trending_up</span>
                             <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">UoA (Operating Availability) per Tipe Unit</h4>
                         </div>
-                        <div class="grid grid-cols-5 gap-1.5 text-center">
+                        <div class="grid grid-cols-4 gap-1.5 text-center">
                             @foreach ($uoa as $u)
                                 @php
                                     $label = $typeShort[$u['type']] ?? $u['type'];
@@ -296,7 +289,7 @@
 
         @elseif ($period === 'monthly')
             {{-- GRAFIK BULANAN (MONTHLY) --}}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 gap-6">
                 {{-- Grafik All Material Hauling (Ore vs Others + Kumulatif) --}}
                 <div class="p-4 bg-white rounded-xl border border-slate-200 print-card">
                     <div class="flex items-center justify-between mb-3">
@@ -309,24 +302,6 @@
                     <div class="relative" style="height: 240px;">
                         <canvas id="pdfMonthlyChart"></canvas>
                     </div>
-                </div>
-
-                {{-- Grafik Monthly Target Hauling --}}
-                <div class="p-4 bg-white rounded-xl border border-slate-200 print-card">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-lg text-[var(--primary)]">flag</span>
-                            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Target Bulanan per Material</h4>
-                        </div>
-                        <span class="text-[11px] text-slate-500">Aktual vs Target</span>
-                    </div>
-                    @if (count($materialChart['names'] ?? []) > 0)
-                        <div class="relative" style="height: {{ max(count($materialChart['names']) * 34 + 30, 240) }}px;">
-                            <canvas id="pdfMonthlyMaterialChart"></canvas>
-                        </div>
-                    @else
-                        <div class="flex items-center justify-center h-48 text-xs text-slate-400">Tidak ada target bulanan</div>
-                    @endif
                 </div>
             </div>
         @endif
@@ -374,7 +349,7 @@
                                 {{ number_format((float)($r->quantityInUnit($targetUnit)), 2) }}
                             </td>
                             <td class="py-1.5 px-2.5 text-right text-slate-500 font-mono">
-                                {{ number_format((float)($r->quantity ?? 0), 1) }} {{ strtoupper($r->quantity_unit ?? 'ton') }}
+                                {{ number_format((float)($r->quantity ?? 0), 1) }} {{ strtoupper($r->quantity_unit ?? 'm3') }}
                             </td>
                             <td class="py-1.5 px-2.5 text-right font-mono text-slate-700">{{ number_format((float)($r->fuel_consumption ?? 0), 1) }}</td>
                         </tr>
@@ -474,7 +449,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        renderPdfDonut('pdfAvgCombined', {!! json_encode($timelineAvg['combined']) !!});
         renderPdfDonut('pdfAvgSiang', {!! json_encode($timelineAvg['siang']) !!});
         renderPdfDonut('pdfAvgMalam', {!! json_encode($timelineAvg['malam']) !!});
 
@@ -609,8 +583,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             label: 'Kumulatif ({{ $unitLabel }})',
                             type: 'line',
                             data: cumulative,
-                            borderColor: '#059669',
-                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            borderColor: '#eab308',
+                            backgroundColor: 'rgba(234, 179, 8, 0.1)',
                             fill: false,
                             tension: 0.2,
                             yAxisID: 'y1',
@@ -625,66 +599,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     scales: {
                         x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#64748b' } },
                         y: { position: 'left', grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#64748b' } },
-                        y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 9 }, color: '#059669' } }
+                        y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 9 }, color: '#a16207' } }
                     },
                     plugins: {
                         legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }
-                    }
-                }
-            });
-        }
-
-        // 2. Monthly Material Chart
-        const mmCtx = document.getElementById('pdfMonthlyMaterialChart');
-        if (mmCtx) {
-            const mc = {!! json_encode($materialChart ?? ['names' => [], 'actualRitasi' => [], 'gap' => [], 'target' => []]) !!};
-            const materialColors = mc.names.map((_, i) => palette[i % palette.length]);
-            const targetValues = mc.target.map((v, i) => mc.target[i] > 0 ? v : null);
-
-            new Chart(mmCtx, {
-                type: 'bar',
-                data: {
-                    labels: mc.names,
-                    datasets: [
-                        {
-                            label: 'Ritasi aktual',
-                            data: mc.actualRitasi,
-                            backgroundColor: materialColors,
-                            borderRadius: 3,
-                            stack: 'main',
-                            order: 2
-                        },
-                        {
-                            label: 'Sisa target',
-                            data: mc.gap,
-                            backgroundColor: 'rgba(239, 68, 68, 0.25)',
-                            borderRadius: 2,
-                            stack: 'main',
-                            order: 3
-                        },
-                        {
-                            label: 'Target',
-                            type: 'line',
-                            data: targetValues,
-                            showLine: false,
-                            pointStyle: 'line',
-                            pointRadius: 0,
-                            pointBorderWidth: 2,
-                            pointBorderColor: '#000',
-                            pointRotation: 90,
-                            order: 1
-                        }
-                    ]
-                },
-                options: {
-                    animation: false,
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { stacked: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 9 }, color: '#64748b' } },
-                        y: { stacked: true, grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#1e3a5f' } }
                     }
                 }
             });

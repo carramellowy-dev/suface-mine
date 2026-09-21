@@ -120,7 +120,8 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="form-label">Satuan</label>
-                    <input type="text" name="satuan" class="form-input" placeholder="Tonnes (t)" required>
+                    <input type="hidden" name="satuan" value="M3">
+                    <div class="form-input bg-slate-50 font-semibold">M3 (Meter Kubik)</div>
                 </div>
                 <div>
                     <label class="form-label">Kategori</label>
@@ -197,7 +198,8 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="form-label">Satuan</label>
-                    <input type="text" name="satuan" id="edit_mat_satuan" class="form-input" required>
+                    <input type="hidden" name="satuan" id="edit_mat_satuan" value="M3">
+                    <div class="form-input bg-slate-50 font-semibold">M3 (Meter Kubik)</div>
                 </div>
                 <div>
                     <label class="form-label">Kategori</label>

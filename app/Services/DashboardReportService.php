@@ -43,12 +43,12 @@ class DashboardReportService
             ->get();
         return array_merge($data, [
             'rows'         => $rows,
-            'selectedUnit' => $data['selectedUnit'] ?? 'ton',
+            'selectedUnit' => $data['selectedUnit'] ?? 'm3',
             'meta'         => [
                 'period' => $period,
                 'start'  => $start->toDateString(),
                 'end'    => $end->toDateString(),
-                'unit'   => $data['selectedUnit'] ?? 'ton',
+                'unit'   => $data['selectedUnit'] ?? 'm3',
             ],
         ]);
     }
@@ -111,10 +111,8 @@ class DashboardReportService
             ->sum(DB::raw('COALESCE(non_ritasis.fuel_consumption, units.fuel_consumption_rate * non_ritasis.hm_total)'));
         $fuel = $fuelRitasi + $fuelNonRitasi;
 
-        $selectedUnit = strtolower((string) $request->query('unit', 'ton'));
-        if (!in_array($selectedUnit, ['ton', 'bcm', 'm3', 'cbm'])) {
-            $selectedUnit = 'ton';
-        }
+        // Satuan tunggal: meter kubik (m3). Data lama ton/bcm/cbm dikonversi otomatis via quantityInUnit().
+        $selectedUnit = 'm3';
 
         $ritasis = $baseQ()->with('material')->get();
         $tonnage = (float) $ritasis->sum(fn ($r) => $r->quantityInUnit($selectedUnit));
@@ -153,8 +151,7 @@ class DashboardReportService
         $n = max($unitCount, 1);
         $avgS = ['red' => round(array_sum(array_column($timelineSiang, 'red')) / $n, 2), 'green' => round(array_sum(array_column($timelineSiang, 'green')) / $n, 2), 'white' => round(array_sum(array_column($timelineSiang, 'white')) / $n, 2)];
         $avgM = ['red' => round(array_sum(array_column($timelineMalam, 'red')) / $n, 2), 'green' => round(array_sum(array_column($timelineMalam, 'green')) / $n, 2), 'white' => round(array_sum(array_column($timelineMalam, 'white')) / $n, 2)];
-        $avgC = ['red' => round(($avgS['red'] + $avgM['red']) / 2, 2), 'green' => round(($avgS['green'] + $avgM['green']) / 2, 2), 'white' => round(($avgS['white'] + $avgM['white']) / 2, 2)];
-        $timelineAvg = ['siang' => $avgS, 'malam' => $avgM, 'combined' => $avgC];
+        $timelineAvg = ['siang' => $avgS, 'malam' => $avgM];
 
         $byTipe = $units->groupBy('tipe');
         $timelineGrouped = [];
@@ -228,7 +225,7 @@ class DashboardReportService
                 'bd'               => round($bd, 2),
             ],
             'selectedUnit'      => $selectedUnit,
-            'supportedUnits'    => ['ton' => 'Ton', 'bcm' => 'BCM', 'm3' => 'M³', 'cbm' => 'CBM'],
+            'supportedUnits'    => ['m3' => 'M³'],
             'pies'              => $pies,
             'hauling'           => $hauling,
             'timeline'          => $timelineSiang,
@@ -310,7 +307,7 @@ class DashboardReportService
         };
     }
 
-    private function dailyOreOthers(Carbon $start, Carbon $end, $ritasis, array $oreNames, string $selectedUnit = 'ton'): array
+    private function dailyOreOthers(Carbon $start, Carbon $end, $ritasis, array $oreNames, string $selectedUnit = 'm3'): array
     {
         $days = [];
         $cumulative = 0;
@@ -336,7 +333,9 @@ class DashboardReportService
     {
         $days = (int) $start->diffInDays($end) + 1;
         $hoursPerDay = $request->filled('shift') ? 12 : 24;
-        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay) {
+        // Hanya 4 tipe, urut: Sany=loader, ADT=dump_truck, Dozr=bulldozer, Exa=excavator
+        $allowed = ['loader', 'dump_truck', 'bulldozer', 'excavator'];
+        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay) {
             $count = $typeUnits->count();
             $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
@@ -346,7 +345,7 @@ class DashboardReportService
             $available = max(0.0, $sh - $bd);
             $pct = $sh > 0 ? round(min(100.0, ($available / $sh) * 100), 1) : 0;
             return ['type' => $type, 'pct' => $pct];
-        })->values()->all();
+        })->sortBy(fn ($row) => array_search($row['type'], $allowed))->values()->all();
         return $byType;
     }
 
@@ -354,7 +353,9 @@ class DashboardReportService
     {
         $days = (int) $start->diffInDays($end) + 1;
         $hoursPerDay = $request->filled('shift') ? 12 : 24;
-        $byType = $units->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay, $baseQ, $baseNonRitasiQ) {
+        // Hanya 4 tipe, urut: Sany=loader, ADT=dump_truck, Dozr=bulldozer, Exa=excavator
+        $allowed = ['loader', 'dump_truck', 'bulldozer', 'excavator'];
+        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay, $baseQ, $baseNonRitasiQ) {
             $count = $typeUnits->count();
             $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
@@ -368,7 +369,7 @@ class DashboardReportService
             $wh = $whRitasi + $whNonRitasi;
             $pct = $available > 0 ? round(min(100.0, ($wh / $available) * 100), 1) : 0;
             return ['type' => $type, 'pct' => $pct];
-        })->values()->all();
+        })->sortBy(fn ($row) => array_search($row['type'], $allowed))->values()->all();
         return $byType;
     }
 }

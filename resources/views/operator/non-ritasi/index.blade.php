@@ -34,7 +34,9 @@
                     <th class="px-4 py-3 text-left">Shift</th>
                     <th class="px-4 py-3 text-left">Unit</th>
                     <th class="px-4 py-3 text-left">Lokasi</th>
+                    <th class="px-4 py-3 text-left">Area</th>
                     <th class="px-4 py-3 text-left">HM Awal</th>
+                    <th class="px-4 py-3 text-left">HM Mulai</th>
                     <th class="px-4 py-3 text-left">HM Akhir</th>
                     <th class="px-4 py-3 text-left">Total</th>
                     <th class="px-4 py-3 text-left">Status</th>
@@ -47,7 +49,9 @@
                     <td class="px-4 py-3">{{ $nr->shift === 'siang' ? 'Day' : 'Night' }}</td>
                     <td class="px-4 py-3">{{ $nr->unit->kode ?? '-' }}</td>
                     <td class="px-4 py-3">{{ $nr->lokasi_pekerjaan ?? '-' }}</td>
+                    <td class="px-4 py-3">{{ $nr->area->nama ?? '-' }}</td>
                     <td class="px-4 py-3">{{ number_format($nr->hm_awal, 1) }}</td>
+                    <td class="px-4 py-3">{{ $nr->hm_mulai_kerja !== null ? number_format($nr->hm_mulai_kerja, 1) : '-' }}</td>
                     <td class="px-4 py-3">{{ number_format($nr->hm_akhir, 1) }}</td>
                     <td class="px-4 py-3">{{ number_format($nr->hm_total, 1) }}</td>
                     <td class="px-4 py-3">
@@ -55,7 +59,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">Tidak ada data</td></tr>
+                <tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">Tidak ada data</td></tr>
                 @endforelse
             </tbody>
         </table>

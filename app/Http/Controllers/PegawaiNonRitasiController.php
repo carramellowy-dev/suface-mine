@@ -27,11 +27,14 @@ class PegawaiNonRitasiController extends Controller
     {
         $validated = $request->validate([
             'unit_id' => 'required|exists:units,id',
-            'area_id' => 'required|exists:areas,id',
             'shift' => 'required|in:siang,malam',
             'tanggal' => 'required|date',
             'hm_awal' => 'required|numeric|min:0',
             'hm_akhir' => 'required|numeric|min:0|gte:hm_awal',
+            'hm_mulai_kerja' => 'required|array|min:1',
+            'hm_mulai_kerja.*' => 'required|numeric|min:0',
+            'area_id' => 'required|array|min:1',
+            'area_id.*' => 'required|exists:areas,id',
             'jam_mulai' => 'nullable|date_format:H:i',
             'jam_selesai' => 'nullable|date_format:H:i',
             'fuel_consumption' => 'nullable|numeric|min:0',
@@ -39,6 +42,36 @@ class PegawaiNonRitasiController extends Controller
             'deskripsi_pekerjaan' => 'nullable|string',
             'kendala' => 'nullable|string',
         ]);
+
+        $fail = function (string $msg) use ($request) {
+            if ($request->header('X-Offline-Replay') === '1') {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['message' => $msg], 422);
+            }
+            return back()->with('error', $msg)->withInput();
+        };
+
+        $rowCount = count($validated['area_id']);
+        if (count($validated['hm_mulai_kerja']) !== $rowCount) {
+            return $fail('Jumlah baris rincian tidak sama. Periksa kembali setiap baris.');
+        }
+
+        // Validasi berurutan: HM awal <= HM mulai baris-1 <= ... <= HM akhir
+        $hmAwal = (float) $validated['hm_awal'];
+        $hmAkhir = (float) $validated['hm_akhir'];
+        $prev = $hmAwal;
+        foreach ($validated['hm_mulai_kerja'] as $hmMulai) {
+            $hmMulai = (float) $hmMulai;
+            if ($hmMulai < $prev) {
+                return $fail('HM mulai kerja tiap baris harus berurutan dan tidak kurang dari HM awal.');
+            }
+            $prev = $hmMulai;
+        }
+        if ($hmAkhir < $prev) {
+            return $fail('HM akhir tidak boleh lebih kecil dari HM mulai kerja terakhir.');
+        }
 
         $user = Auth::user();
         if (! $user->pegawai_id) {
@@ -100,16 +133,35 @@ class PegawaiNonRitasiController extends Controller
             return back()->with('error', 'Total Hour Meter (HM) tidak boleh melebihi 12 jam dalam 1 shift.');
         }
 
-        $validated['pegawai_id'] = $pegawaiId;
-        $validated['hm_total'] = $hmTotal;
+        // 1 submit = N baris Non-Ritasi. HM total & fuel hanya dicatat di baris pertama
+        // agar agregasi dashboard (WH, fuel) tidak terhitung ganda.
+        $base = [
+            'pegawai_id' => $pegawaiId,
+            'unit_id' => $validated['unit_id'],
+            'tanggal' => $validated['tanggal'],
+            'shift' => $validated['shift'],
+            'hm_awal' => $validated['hm_awal'],
+            'hm_akhir' => $validated['hm_akhir'],
+            'jam_mulai' => $validated['jam_mulai'] ?? null,
+            'jam_selesai' => $validated['jam_selesai'] ?? null,
+            'deskripsi_pekerjaan' => $validated['deskripsi_pekerjaan'] ?? null,
+            'kendala' => $validated['kendala'] ?? null,
+        ];
 
-        NonRitasi::create($validated);
+        for ($i = 0; $i < $rowCount; $i++) {
+            NonRitasi::create(array_merge($base, [
+                'hm_mulai_kerja' => $validated['hm_mulai_kerja'][$i],
+                'area_id' => $validated['area_id'][$i],
+                'hm_total' => $i === 0 ? $hmTotal : 0,
+                'fuel_consumption' => $i === 0 ? ($validated['fuel_consumption'] ?? null) : null,
+            ]));
+        }
 
         if ($request->ajax() || $request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json(['success' => true]);
         }
 
-        return back()->with('success', 'Data non-ritasi berhasil disimpan!');
+        return back()->with('success', "Data non-ritasi ({$rowCount} baris) berhasil disimpan!");
     }
 
     public function riwayat(Request $request)

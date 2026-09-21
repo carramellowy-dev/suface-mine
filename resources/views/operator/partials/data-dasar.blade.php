@@ -14,7 +14,7 @@
     <div>
         <label class="form-label">Shift <span class="text-red-500">*</span></label>
         <select name="shift" class="form-input" required>
-            <option value="">Contoh: Siang</option>
+            <option value="" disabled {{ old('shift') ? '' : 'selected' }}>Pilih Shift</option>
             <option value="siang" {{ old('shift') == 'siang' ? 'selected' : '' }}>Siang</option>
             <option value="malam" {{ old('shift') == 'malam' ? 'selected' : '' }}>Malam</option>
         </select>
@@ -27,7 +27,7 @@
     <div>
         <label class="form-label">{{ $unitLabel ?? 'Nomor Unit' }} <span class="text-red-500">*</span></label>
         <select name="unit_id" id="unitSelect" class="form-input" required>
-            <option value="">Contoh: DT-1042</option>
+            <option value="" disabled {{ old('unit_id') ? '' : 'selected' }}>Pilih Nomor Unit</option>
             @foreach($units as $id => $kode)
                 @php
                     $status = $latestStatus[$id] ?? 'ready';

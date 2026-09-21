@@ -14,7 +14,7 @@
     $currentWeek = request('week', now()->format('Y-\WW'));
     $currentMonth = request('month', now()->format('Y-m'));
     $currentShift = request('shift', '');
-    $currentUnit = request('unit', $selectedUnit ?? 'ton');
+    $currentUnit = 'm3';
 @endphp
 
 <div class="mb-6 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4 pb-1">
@@ -71,17 +71,6 @@
         </select>
     </div>
 
-    <div class="flex items-center gap-2.5">
-        <label class="text-sm font-bold text-slate-700 whitespace-nowrap">Satuan</label>
-        <select id="filterUnit"
-                class="text-sm border border-slate-300 rounded-lg px-3 py-1.5 w-32 focus:ring-4 focus:ring-[var(--accent)]/15 focus:border-[var(--accent)] outline-none bg-slate-50/50 hover:border-slate-400 transition-all font-semibold text-[var(--primary)]"
-                onchange="applyFilter({unit: this.value})">
-            <option value="ton" {{ $currentUnit === 'ton' ? 'selected' : '' }}>Ton (Berat)</option>
-            <option value="bcm" {{ $currentUnit === 'bcm' ? 'selected' : '' }}>BCM (Volume)</option>
-            <option value="m3" {{ $currentUnit === 'm3' ? 'selected' : '' }}>M³ (Volume)</option>
-            <option value="cbm" {{ $currentUnit === 'cbm' ? 'selected' : '' }}>CBM (Volume)</option>
-        </select>
-    </div>
 </div>
 
 <div>

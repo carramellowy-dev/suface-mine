@@ -3,8 +3,8 @@
     $haulingByMaterial = $haulingByMaterial ?? [];
     $availability = $availability ?? [];
     $uoa = $uoa ?? [];
-    $typeLabels = ['excavator' => 'Excavator', 'dump_truck' => 'Dump Truck', 'bulldozer' => 'Bulldozer', 'loader' => 'Loader', 'motor_grader' => 'Motor Grader'];
-    $typeShort = ['excavator' => 'Exc', 'dump_truck' => 'DT', 'bulldozer' => 'Dozer', 'loader' => 'LV', 'motor_grader' => 'MG'];
+    $typeLabels = ['excavator' => 'Exa', 'dump_truck' => 'ADT', 'bulldozer' => 'Dozr', 'loader' => 'Sany'];
+    $typeShort = ['excavator' => 'Exa', 'dump_truck' => 'ADT', 'bulldozer' => 'Dozr', 'loader' => 'Sany'];
 @endphp
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
@@ -12,7 +12,7 @@
         <div class="flex items-center gap-3 mb-4">
             <span class="material-symbols-outlined text-[var(--primary)] text-xl">bar_chart</span>
             <span class="text-sm text-slate-500">Weekly All Hauling</span>
-            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} <span class="text-base font-normal">{{ strtoupper($selectedUnit ?? 'ton') }}</span></span>
+            <span class="text-2xl font-bold text-[var(--primary)]">{{ number_format((float)($kpi['tonnage'] ?? 0), 0) }} <span class="text-base font-normal">M3</span></span>
         </div>
         @if (count($haulingByMaterial) > 0)
             <div class="relative" style="height: {{ count($haulingByMaterial) * 36 + 40 }}px;">
@@ -30,7 +30,7 @@
                 <h3 class="font-heading font-bold text-[var(--primary)]">Availability</h3>
             </div>
             <p class="text-xs text-slate-500 mb-4">Persentase waktu unit siap digunakan dari total waktu operasional</p>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 @foreach ($availability as $a)
                     @php
                         $label = $typeShort[$a['type']] ?? $a['type'];
@@ -52,7 +52,7 @@
                 <h3 class="font-heading font-bold text-[var(--primary)]">UoA</h3>
             </div>
             <p class="text-xs text-slate-500 mb-4">Unit Operating Availability &mdash; waktu unit benar-benar bekerja dari waktu tersedia</p>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 @foreach ($uoa as $u)
                     @php
                         $label = $typeShort[$u['type']] ?? $u['type'];
@@ -69,7 +69,7 @@
         </div>
     </div>
 </div>
-<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang = total produksi mingguan per material ({{ strtoupper($selectedUnit ?? 'ton') }}). Gauge = persentase Availability (ketersediaan unit) dan UoA (unit benar-benar bekerja) per tipe unit. Warna hijau &ge;80% (baik), kuning 50&ndash;79% (kurang), merah &lt;50% (rendah).</p>
+<p class="text-xs text-slate-400 mb-6 px-1">Grafik batang = total produksi mingguan per material (M3). Gauge = persentase Availability (ketersediaan unit) dan UoA (unit benar-benar bekerja) per tipe unit. Warna hijau &ge;80% (baik), kuning 50&ndash;79% (kurang), merah &lt;50% (rendah).</p>
 
 <div class="card p-4 mb-6">
     <div class="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500">
