@@ -138,20 +138,6 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="form-label">Stok</label>
-                    <input type="number" name="stok" class="form-input" step="0.01" min="0" value="0" required>
-                </div>
-                <div>
-                    <label class="form-label">Stok Minimal</label>
-                    <input type="number" name="stok_minimal" class="form-input" step="0.01" min="0" value="0" required>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="form-label">Harga Satuan</label>
-                    <input type="number" name="harga_satuan" class="form-input" step="0.01" min="0" placeholder="0">
-                </div>
-                <div>
                     <label class="form-label">Status</label>
                     <select name="status" class="form-input" required>
                         <option value="active">Active</option>
@@ -216,20 +202,6 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="form-label">Stok</label>
-                    <input type="number" name="stok" id="edit_mat_stok" class="form-input" step="0.01" min="0" required>
-                </div>
-                <div>
-                    <label class="form-label">Stok Minimal</label>
-                    <input type="number" name="stok_minimal" id="edit_mat_stok_minimal" class="form-input" step="0.01" min="0" required>
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="form-label">Harga Satuan</label>
-                    <input type="number" name="harga_satuan" id="edit_mat_harga" class="form-input" step="0.01" min="0">
-                </div>
-                <div>
                     <label class="form-label">Status</label>
                     <select name="status" id="edit_mat_status" class="form-input" required>
                         <option value="active">Active</option>
@@ -267,9 +239,6 @@ function editMaterial(id) {
             document.getElementById('edit_mat_kode').value = data.kode;
             document.getElementById('edit_mat_satuan').value = data.satuan;
             document.getElementById('edit_mat_kategori').value = data.kategori;
-            document.getElementById('edit_mat_stok').value = data.stok;
-            document.getElementById('edit_mat_stok_minimal').value = data.stok_minimal;
-            document.getElementById('edit_mat_harga').value = data.harga_satuan || '';
             document.getElementById('edit_mat_status').value = data.status;
             document.getElementById('edit_mat_keterangan').value = data.keterangan || '';
             openModal('materialEditModal');
