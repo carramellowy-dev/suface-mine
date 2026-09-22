@@ -39,17 +39,9 @@
             <span class="material-symbols-outlined text-[var(--primary)]">scale</span>
             Rincian Muatan per Material
         </h2>
-        <p class="text-xs sm:text-sm text-slate-500 mb-4">Jika dalam 1 shift membawa ore/material berbeda, klik <strong>tanda (+) Tambah Baris</strong> untuk menambah kolom. Muatan dihitung otomatis dari beban unit.</p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 mb-4 border border-slate-200 rounded-xl bg-amber-50/50">
-            <div class="md:col-span-1">
-                <label class="form-label">Beban Unit / Kapasitas (M3/trip) <span class="text-red-500">*</span></label>
-                <input type="number" name="kapasitas_unit" id="kapasitasInput" class="form-input" step="0.01" min="0" value="" required placeholder="cth: 91">
-                <p class="mt-1.5 text-xs text-slate-500">Terisi otomatis dari data unit. Bisa diubah di sini dan akan tersimpan sebagai beban unit tersebut.</p>
-            </div>
-            <div class="md:col-span-2 flex items-end">
-                <p class="text-xs sm:text-sm text-slate-500 pb-2"><span id="kapasitasInfo" class="font-semibold text-[var(--primary)]">Pilih unit dahulu.</span></p>
-            </div>
-        </div>
+        <p class="text-xs sm:text-sm text-slate-500 mb-4">Jika dalam 1 shift membawa ore/material berbeda, klik <strong>tanda (+) Tambah Baris</strong> untuk menambah kolom. Muatan dihitung otomatis dari beban unit yang tersimpan pada data unit.</p>
+        {{-- Beban unit terisi otomatis dari data unit, tidak perlu ditampilkan/diisi operator --}}
+        <input type="hidden" name="kapasitas_unit" id="kapasitasInput" value="">
         <input type="hidden" name="quantity_unit" value="m3">
 
         <div id="ritasiRows" class="space-y-3 mb-4">
@@ -181,24 +173,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const hmAkhir = document.getElementById('hmAkhir');
     const warning = document.getElementById('hmAkhirWarning');
     const unitSelect = document.getElementById('unitSelect');
-    const kapasitasInfo = document.getElementById('kapasitasInfo');
     const kapasitasInput = document.getElementById('kapasitasInput');
     const kapasitasMap = {!! json_encode($unitKapasitas ?? []) !!};
 
     function unitKapasitas() {
-        return parseFloat(kapasitasInput.value) || 0;
+        if (kapasitasInput && kapasitasInput.value !== '') {
+            return parseFloat(kapasitasInput.value) || 0;
+        }
+        if (typeof kapasitasMap !== 'undefined' && unitSelect && unitSelect.value) {
+            return parseFloat(kapasitasMap[unitSelect.value]) || 0;
+        }
+        return 0;
     }
 
     function updateKapasitasInfo() {
         if (!unitSelect || !unitSelect.value) {
-            kapasitasInfo.textContent = 'Pilih unit dahulu.';
+            if (kapasitasInput) kapasitasInput.value = '';
             return;
         }
         const k = parseFloat(kapasitasMap[unitSelect.value]) || 0;
-        kapasitasInput.value = k > 0 ? k : '';
-        kapasitasInfo.textContent = k > 0
-            ? 'Beban tersimpan: ' + k + ' M3/trip. Ubah angka di samping bila beban aktual berbeda — nilai baru akan tersimpan untuk unit ini.'
-            : 'Unit ini belum punya beban tersimpan. Isi angka beban di samping.';
+        // Beban unit terisi otomatis dari data unit (hidden, tidak ditampilkan)
+        if (kapasitasInput) kapasitasInput.value = k > 0 ? k : '';
         recalc();
     }
 

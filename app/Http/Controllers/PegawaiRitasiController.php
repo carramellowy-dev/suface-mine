@@ -70,8 +70,7 @@ class PegawaiRitasiController extends Controller
             }
         }
 
-        // Muatan dihitung otomatis: ritasi x beban unit. Beban bisa ditentukan/
-        // diubah langsung dari form dan akan tersimpan pada data unit.
+        // Muatan dihitung otomatis: ritasi x beban unit dari data master unit.
         $unit = Unit::find($validated['unit_id']);
         $inputKapasitas = $request->filled('kapasitas_unit') ? (float) $request->input('kapasitas_unit') : null;
         if ($inputKapasitas !== null && $inputKapasitas > 0 && abs($inputKapasitas - (float) ($unit->kapasitas ?? 0)) > 0.0001) {
@@ -80,7 +79,7 @@ class PegawaiRitasiController extends Controller
         }
         $kapasitas = (float) ($unit->kapasitas ?? 0);
         if ($kapasitas <= 0) {
-            return $fail('Beban unit ' . ($unit->kode ?? '') . ' belum ditentukan. Isi beban/kapasitas (M3/trip) pada form.');
+            return $fail('Beban unit ' . ($unit->kode ?? '') . ' belum ditentukan. Hubungi admin untuk melengkapi data beban unit.');
         }
 
         // Validasi berurutan: HM awal <= HM mulai baris-1 <= ... <= HM akhir
