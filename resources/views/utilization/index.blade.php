@@ -24,7 +24,7 @@
                 <span class="material-symbols-outlined text-lg">filter_alt</span>
                 Filter
             </button>
-            @if(request()->filled('tanggal_start'))
+            @if(request()->filled('tanggal_start') || request()->filled('tanggal_end'))
                 <a href="{{ route("$role.utilization.index") }}" class="btn-secondary">Reset</a>
             @endif
         </form>
@@ -32,30 +32,32 @@
 </div>
 
 @php
-    $breakdownCount = $latestStatus->filter(fn ($t) => $t === 'breakdown')->count();
-    $servisCount = $latestStatus->filter(fn ($t) => $t === 'servis')->count();
-    $readyCount = $latestStatus->filter(fn ($t) => $t === 'ready')->count();
+    // Kartu = rekap riwayat yang tampil (distinct unit per status, ikut filter tanggal).
+    // Fallback ke hitungan status-terkini bila variabel rekap tidak tersedia.
+    $breakdownCount = $recapBreakdown ?? $latestStatus->filter(fn ($t) => $t === 'breakdown')->count();
+    $servisCount = $recapServis ?? $latestStatus->filter(fn ($t) => $t === 'servis')->count();
+    $readyCount = $recapReady ?? max(0, ($totalUnits ?? 0) - $breakdownCount - $servisCount);
 @endphp
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
     <div class="stat-card border-l-4 border-red-500">
         <span class="material-symbols-outlined text-red-600">report</span>
         <div class="min-w-0">
-            <p class="text-2xl font-bold">{{ $breakdownCount }}</p>
+            <p class="text-2xl font-bold" id="statBreakdown">{{ $breakdownCount }}</p>
             <p class="text-sm text-slate-500">Unit Breakdown</p>
         </div>
     </div>
     <div class="stat-card border-l-4 border-amber-500">
         <span class="material-symbols-outlined text-amber-600">build</span>
         <div class="min-w-0">
-            <p class="text-2xl font-bold">{{ $servisCount }}</p>
+            <p class="text-2xl font-bold" id="statServis">{{ $servisCount }}</p>
             <p class="text-sm text-slate-500">Unit Servis</p>
         </div>
     </div>
     <div class="stat-card border-l-4 border-green-500">
         <span class="material-symbols-outlined text-green-600">check_circle</span>
         <div class="min-w-0">
-            <p class="text-2xl font-bold">{{ $readyCount }}</p>
+            <p class="text-2xl font-bold" id="statReady">{{ $readyCount }}</p>
             <p class="text-sm text-slate-500">Unit Ready</p>
         </div>
     </div>
@@ -79,7 +81,7 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">PENGISI</th>
                 </tr>
             </thead>
-            <tbody class="divide-y">
+            <tbody class="divide-y" id="utilRows">
                 @forelse($utilizations as $u)
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm">{{ $u->started_at->format('d M Y') }}</td>
@@ -104,8 +106,54 @@
             </tbody>
         </table>
     </div>
-    <div class="p-4 border-t">
+    <div class="p-4 border-t" id="utilPager">
         {{ $utilizations->links() }}
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+// Auto-refresh real-time setiap 20 detik: kartu + baris riwayat + pagination
+// diambil dari SATU respons halaman yang sama sehingga selalu sinkron satu sama
+// lain, mengikuti filter & halaman yang sedang aktif. Tanpa mengubah fitur apa pun.
+(function () {
+    const cards = {
+        breakdown: document.getElementById('statBreakdown'),
+        servis: document.getElementById('statServis'),
+        ready: document.getElementById('statReady'),
+    };
+    const rows = document.getElementById('utilRows');
+    const pager = document.getElementById('utilPager');
+    if (!cards.breakdown || !cards.servis || !cards.ready || !rows || !pager) return;
+    let timer = null;
+    async function refreshLive() {
+        if (document.hidden) return;
+        try {
+            const res = await fetch(window.location.href, { headers: { Accept: 'text/html' } });
+            if (!res.ok) return;
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const nCards = {
+                breakdown: doc.getElementById('statBreakdown'),
+                servis: doc.getElementById('statServis'),
+                ready: doc.getElementById('statReady'),
+            };
+            const nRows = doc.getElementById('utilRows');
+            const nPager = doc.getElementById('utilPager');
+            // Tukar hanya bila struktur dikenali (abaikan bila sesi berakhir/login).
+            if (!nCards.breakdown || !nCards.servis || !nCards.ready || !nRows || !nPager) return;
+            cards.breakdown.textContent = nCards.breakdown.textContent;
+            cards.servis.textContent = nCards.servis.textContent;
+            cards.ready.textContent = nCards.ready.textContent;
+            rows.innerHTML = nRows.innerHTML;
+            pager.innerHTML = nPager.innerHTML;
+        } catch { /* abaikan: coba lagi periode berikutnya */ }
+    }
+    timer = setInterval(refreshLive, 20000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && timer) { clearInterval(timer); timer = null; }
+        else if (!document.hidden && !timer) { refreshLive(); timer = setInterval(refreshLive, 20000); }
+    });
+})();
+</script>
+@endpush

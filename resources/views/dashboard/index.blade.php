@@ -162,7 +162,7 @@ function triggerExport(format) {
     params.set('tab', '{{ $tab }}');
     params.set('period', '{{ $tab }}');
     params.set('format', format);
-    const exportUrl = '{{ route(auth()->user()->role . ".dashboard.export") }}?' + params.toString();
+    const exportUrl = '{{ route((auth()->user()?->role ?? "admin") . ".dashboard.export") }}?' + params.toString();
     closeModal('exportModal');
     if (format === 'pdf') {
         window.open(exportUrl, '_blank');

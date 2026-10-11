@@ -9,9 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>@yield('title', 'Dashboard') - Surface Mine</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {{-- Font lokal (self-hosted, tanpa CDN agar tidak blocking saat offline/lamban) --}}
+    <link href="{{ asset('css/fonts.css') }}?v={{ @filemtime(public_path('css/fonts.css')) ?: 1 }}" rel="stylesheet">
+    <script src="{{ asset('js/vendor/chart.umd.min.js') }}?v={{ @filemtime(public_path('js/vendor/chart.umd.min.js')) ?: 1 }}"></script>
     @stack('styles')
     <style>
         [x-cloak] { display: none !important; }
@@ -102,6 +102,20 @@
     </style>
 </head>
 <body class="bg-[var(--bg)] font-['Inter',sans-serif]">
+    {{-- Cegah double-submit (tap ganda di HP saat loading lambat -> 419 Page Expired).
+         Tidak mengubah fitur: hanya memblokir submit kedua, validasi JS & error server tetap jalan normal. --}}
+    <script>
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.dataset.guarded === '1') { e.preventDefault(); return; }
+        setTimeout(function () {
+            if (e.defaultPrevented) return;
+            form.dataset.guarded = '1';
+            form.querySelectorAll('button[type="submit"], input[type="submit"], button:not([type])').forEach(function (b) { b.disabled = true; });
+        }, 0);
+    });
+    </script>
     @php $role = Auth::user()->role ?? 'admin'; @endphp
     @php $headerDate = $headerDate ?? \Illuminate\Support\Carbon::now()->format('d M Y'); @endphp
     @include('components.sidebar', ['role' => $role])

@@ -27,7 +27,6 @@ class NonRitasiSeeder extends Seeder
             return;
         }
 
-        $lokasiList = ['Pit A North', 'Pit B South', 'Disposal 1', 'Disposal 2', 'Hauling Road A', 'Stockpile 1', 'Crusher Area 1'];
         $deskripsiGeneral = ['Dozing material di Disposal 1', 'Grading & perawatan Hauling Road A', 'Drilling & blasting preparation', 'Excavating & ditching saluran air', 'Pushing topsoil di area Pit A'];
         $deskripsiNonRitasi = ['Perbaikan jalan tambang', 'Perataan lereng disposal', 'Pembersihan area pit dari lumpur', 'Penggarukan overburden keras'];
         $shifts = ['siang', 'malam'];
@@ -89,7 +88,6 @@ class NonRitasiSeeder extends Seeder
                         'jam_mulai' => $isGeneral ? $jamMulaiList[array_rand($jamMulaiList)] : null,
                         'jam_selesai' => $isGeneral ? $jamSelesaiList[array_rand($jamSelesaiList)] : null,
                         'is_overtime' => $isGeneral ? (rand(0, 100) < 25) : false,
-                        'lokasi_pekerjaan' => $lokasiList[array_rand($lokasiList)],
                         'deskripsi_pekerjaan' => $isGeneral
                             ? $deskripsiGeneral[array_rand($deskripsiGeneral)]
                             : $deskripsiNonRitasi[array_rand($deskripsiNonRitasi)],

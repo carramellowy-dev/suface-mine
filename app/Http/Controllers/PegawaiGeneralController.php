@@ -32,7 +32,6 @@ class PegawaiGeneralController extends Controller
             'jam_selesai' => 'required',
             'supervisor_id' => 'required|exists:users,id',
             'senior_spv_id' => 'nullable|exists:users,id|different:supervisor_id',
-            'lokasi_pekerjaan' => 'nullable|string',
             'deskripsi_pekerjaan' => 'nullable|string',
             'is_overtime' => 'nullable|boolean',
         ], [

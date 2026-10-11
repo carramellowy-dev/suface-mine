@@ -10,23 +10,64 @@ use Illuminate\Http\Request;
 
 class UtilizationController extends Controller
 {
-    public function index(Request $request)
+    private function baseQuery(Request $request)
     {
         $query = UnitUtilization::with(['unit', 'user'])
             ->orderBy('started_at', 'desc')
             ->orderBy('id', 'desc');
 
         if ($request->filled('tanggal_start') && $request->filled('tanggal_end')) {
-            $query->whereBetween('started_at', [$request->tanggal_start, $request->tanggal_end]);
+            // Bandingkan per tanggal (bukan timestamp) agar filter 1 hari penuh ikut terhitung.
+            $query->whereDate('started_at', '>=', $request->tanggal_start)
+                ->whereDate('started_at', '<=', $request->tanggal_end);
         } elseif ($request->filled('tanggal_start')) {
             $query->whereDate('started_at', $request->tanggal_start);
+        } elseif ($request->filled('tanggal_end')) {
+            $query->whereDate('started_at', '<=', $request->tanggal_end);
         }
 
-        $utilizations = $query->paginate(15);
+        return $query;
+    }
+
+    private function recapCounts(Request $request): array
+    {
+        // Rekap = hitung BARIS riwayat per status dalam lingkup filter.
+        // Tiap input operator menambah 1 baris sehingga kartu selalu bergerak real-time,
+        // dan jumlah kartu = jumlah baris tabel (mudah diverifikasi manual).
+        $query = $this->baseQuery($request);
+        return [
+            'breakdown' => (clone $query)->where('status', 'breakdown')->count(),
+            'servis' => (clone $query)->where('status', 'servis')->count(),
+            'ready' => (clone $query)->where('status', 'ready')->count(),
+        ];
+    }
+
+    public function index(Request $request)
+    {
+        $query = $this->baseQuery($request);
+
+        // Rekap riwayat (ikut filter tanggal yang aktif): distinct unit per status
+        // agar kartu konsisten dengan isi tabel riwayat di bawahnya.
+        // (Dihitung SEBELUM paginate karena paginate menambah limit/offset.)
+        $counts = $this->recapCounts($request);
+        $recapBreakdown = $counts['breakdown'];
+        $recapServis = $counts['servis'];
+        $recapReady = $counts['ready'];
+
+        $utilizations = $query->paginate(15)->withQueryString();
 
         $latestStatus = UnitUtilization::latestPerUnit()->pluck('status', 'unit_id');
+        // Total unit aktif agar kartu Ready sinkron dengan seluruh armada
+        // (unit yang belum pernah punya riwayat maintenance juga terhitung Ready).
+        $totalUnits = Unit::where('is_active', true)->count();
 
-        return view('utilization.index', compact('utilizations', 'latestStatus'));
+        return view('utilization.index', compact('utilizations', 'latestStatus', 'totalUnits', 'recapBreakdown', 'recapServis', 'recapReady'));
+    }
+
+    /** Ringkasan kartu untuk auto-refresh real-time (dipoll halaman utilization). */
+    public function summary(Request $request)
+    {
+        return response()->json($this->recapCounts($request));
     }
 
     public function create()

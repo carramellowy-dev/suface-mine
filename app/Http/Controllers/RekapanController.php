@@ -50,15 +50,13 @@ class RekapanController extends Controller
             $ritasiQuery->where(function ($q) use ($searchLower) {
                 $q->whereHas('pegawai', fn ($pq) => $pq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
                    ->orWhereHas('unit', fn ($uq) => $uq->whereRaw('LOWER(kode) LIKE ?', [$searchLower]))
-                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
-                   ->orWhereRaw('LOWER(lokasi_pekerjaan) LIKE ?', [$searchLower]);
+                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]));
             });
 
             $nonRitasiQuery->where(function ($q) use ($searchLower) {
                 $q->whereHas('pegawai', fn ($pq) => $pq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
                    ->orWhereHas('unit', fn ($uq) => $uq->whereRaw('LOWER(kode) LIKE ?', [$searchLower]))
-                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]))
-                   ->orWhereRaw('LOWER(lokasi_pekerjaan) LIKE ?', [$searchLower]);
+                   ->orWhereHas('area', fn ($aq) => $aq->whereRaw('LOWER(nama) LIKE ?', [$searchLower]));
             });
         }
 

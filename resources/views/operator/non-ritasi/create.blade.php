@@ -96,12 +96,7 @@
             <span class="material-symbols-outlined text-[var(--primary)]">work</span>
             Detail Pekerjaan
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-                <label class="form-label">Lokasi Pekerjaan (Pit / Disposal)</label>
-                <input type="text" name="lokasi_pekerjaan" class="form-input" placeholder="Contoh: Pit 1 North">
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Lokasi spesifik pengerjaan non-ritasi shift ini.</p>
-            </div>
+        <div class="grid grid-cols-1 gap-6 mb-6">
             <div>
                 <label class="form-label">Deskripsi Pekerjaan / Kendala (Opsional)</label>
                 <textarea name="deskripsi_pekerjaan" class="form-input" rows="3" placeholder="Tambahkan catatan khusus bila ada kendala operasional..."></textarea>

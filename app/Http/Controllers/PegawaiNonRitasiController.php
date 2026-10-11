@@ -38,7 +38,6 @@ class PegawaiNonRitasiController extends Controller
             'jam_mulai' => 'nullable|date_format:H:i',
             'jam_selesai' => 'nullable|date_format:H:i',
             'fuel_consumption' => 'nullable|numeric|min:0',
-            'lokasi_pekerjaan' => 'nullable|string',
             'deskripsi_pekerjaan' => 'nullable|string',
             'kendala' => 'nullable|string',
         ]);

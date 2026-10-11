@@ -70,11 +70,6 @@
                 </select>
                 <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Area kerja shift ini.</p>
             </div>
-            <div>
-                <label class="form-label">Lokasi Pekerjaan (Pit / Disposal)</label>
-                <input type="text" name="lokasi_pekerjaan" class="form-input" placeholder="Contoh: Pit 1 North">
-                <p class="mt-1.5 text-xs sm:text-sm text-slate-500">Lokasi spesifik pengerjaan shift ini.</p>
-            </div>
             <div class="col-span-2">
                 <label class="form-label">Deskripsi Pekerjaan / Kendala (Opsional)</label>
                 <textarea name="deskripsi_pekerjaan" class="form-input" rows="3" placeholder="Tambahkan catatan khusus bila ada kendala operasional..."></textarea>

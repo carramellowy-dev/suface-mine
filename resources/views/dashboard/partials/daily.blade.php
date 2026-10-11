@@ -107,7 +107,8 @@
         </div>
     </div>
 
-    <div class="flex gap-2 mb-4">
+    {{-- Toggle shift disembunyikan dari tampilan; fungsi showShift tetap dipakai untuk render awal (default siang) --}}
+    <div class="hidden">
         <button onclick="showShift('siang')" id="tabSiang" class="px-4 py-2 rounded-lg text-sm font-semibold transition bg-[var(--primary)] text-white">Shift Siang</button>
         <button onclick="showShift('malam')" id="tabMalam" class="px-4 py-2 rounded-lg text-sm font-semibold transition bg-slate-200 text-slate-600">Shift Malam</button>
     </div>
@@ -147,7 +148,14 @@
                     @endphp
                     <div class="shift-row" data-si='{"r":{{ $si["red"] }},"g":{{ $si["green"] }},"w":{{ $si["white"] }}}' data-ma='{"r":{{ $mi["red"] }},"g":{{ $mi["green"] }},"w":{{ $mi["white"] }}}'>
                         <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-700 unit-kode">{{ $item['kode'] }}</span>
+                            <span class="flex items-center gap-2">
+                                <span class="font-medium text-slate-700 unit-kode">{{ $item['kode'] }}</span>
+                                @php
+                                    $stLabel = $si['red'] > 0 ? 'Maintenance' : ($si['green'] > 0 ? 'In Use' : 'Standby');
+                                    $stClass = $si['red'] > 0 ? 'badge-breakdown' : ($si['green'] > 0 ? 'badge-active' : 'badge-standby');
+                                @endphp
+                                <span class="shift-status badge {{ $stClass }}">{{ $stLabel }}</span>
+                            </span>
                             <span class="text-slate-500 shift-stats"></span>
                         </div>
                         <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -230,6 +238,14 @@ function showShift(shift) {
             '<span class="inline-flex items-center gap-1 ml-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>' + d.w.toFixed(1) + 'j</span>';
         row.querySelector('.shift-bar').style.background =
             'linear-gradient(to right, #ef4444 0%, #ef4444 ' + pRed + '%, #22c55e ' + pRed + '%, #22c55e ' + pAct + '%, #e2e8f0 ' + pAct + '%, #e2e8f0 100%)';
+        const st = row.querySelector('.shift-status');
+        if (st) {
+            let label = 'Standby', cls = 'badge-standby';
+            if (d.r > 0) { label = 'Maintenance'; cls = 'badge-breakdown'; }
+            else if (d.g > 0) { label = 'In Use'; cls = 'badge-active'; }
+            st.className = 'shift-status badge ' + cls;
+            st.textContent = label;
+        }
     });
     document.querySelectorAll('[id^="tipe-"]').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('[id^="chevron-"]').forEach(el => el.style.transform = '');

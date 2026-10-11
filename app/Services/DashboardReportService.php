@@ -87,7 +87,9 @@ class DashboardReportService
         $days = (int) $start->diffInDays($end) + 1;
         $hoursPerDay = $request->filled('shift') ? 12 : 24;
         $sh = $unitCount * $hoursPerDay * $days;
-        $bd = $this->bdHoursForRange($start, $end);
+        // Batched (1 query): jam maintenance per unit — dipakai timeline, availability, uoa.
+        $bdByUnit = $this->bdHoursByUnit($start, $end);
+        $bd = array_sum($bdByUnit);
         $available = max(0.0, $sh - $bd);
         $pa = $sh > 0 ? min(100.0, ($available / $sh) * 100) : 0;
 
@@ -123,20 +125,18 @@ class DashboardReportService
         ];
         $pies['combined'] = $pies['day'] + $pies['night'];
 
+        // Batched (2 query GROUP BY): WH per unit per shift — ganti 4N query sum per unit.
+        $whRitasiByUnit = $this->whByUnitShift('ritasis', $start, $end, $request);
+        $whNonRitasiByUnit = $this->whByUnitShift('non_ritasis', $start, $end, $request);
+
         $timelineSiang = [];
         $timelineMalam = [];
         foreach ($units as $u) {
-            $redTotal = $this->unitMaintenanceHours($u->id, $start, $end);
+            $redTotal = (float) ($bdByUnit[$u->id] ?? 0);
             $redS = min(12.0, $redTotal);
             $redM = min(12.0, max(0.0, $redTotal - 12.0));
-            $greenS = (float) ($baseQ()->where('unit_id', $u->id)->where('shift', 'siang')
-                ->sum(DB::raw('LEAST(hm_total, 12)'))
-                + $baseNonRitasiQ()->where('unit_id', $u->id)->where('shift', 'siang')
-                ->sum(DB::raw('LEAST(hm_total, 12)')));
-            $greenM = (float) ($baseQ()->where('unit_id', $u->id)->where('shift', 'malam')
-                ->sum(DB::raw('LEAST(hm_total, 12)'))
-                + $baseNonRitasiQ()->where('unit_id', $u->id)->where('shift', 'malam')
-                ->sum(DB::raw('LEAST(hm_total, 12)')));
+            $greenS = (float) (($whRitasiByUnit[$u->id]['siang'] ?? 0) + ($whNonRitasiByUnit[$u->id]['siang'] ?? 0));
+            $greenM = (float) (($whRitasiByUnit[$u->id]['malam'] ?? 0) + ($whNonRitasiByUnit[$u->id]['malam'] ?? 0));
             $whiteS = max(12 - $redS - $greenS, 0.0);
             $whiteM = max(12 - $redM - $greenM, 0.0);
             $timelineSiang[] = [
@@ -188,6 +188,7 @@ class DashboardReportService
             default => 'harian',
         };
         $targetsByName = DailyTarget::with('material')->where('periode', $periodKey)->get()
+            ->filter(fn ($t) => $t->material?->nama !== null)
             ->mapWithKeys(fn ($t) => [$t->material->nama => (int) $t->target_ritasi]);
 
         $ritasiByName = $ritasis->groupBy(fn ($r) => $r->material->nama ?? 'Lainnya')
@@ -208,16 +209,24 @@ class DashboardReportService
         $oreNames = ['Bauxite Ore (Raw)', 'Processed Alumina', 'Pasir Hitam', 'Mining Tuff', 'Batu Pica (5/15)', 'Tuff Off', 'KCN', 'Cake', 'DSTuff'];
         $dailyOreOthers = $this->dailyOreOthers($start, $end, $ritasis, $oreNames, $selectedUnit);
 
-        $availability = $this->availabilityByType($start, $end, $units, $request);
-        $uoa = $this->uoaByType($start, $end, $units, $baseQ, $baseNonRitasiQ, $request);
+        $availability = $this->availabilityByType($start, $end, $units, $request, $bdByUnit);
+        $uoa = $this->uoaByType($start, $end, $units, $whRitasiByUnit, $whNonRitasiByUnit, $bdByUnit, $request);
+
+        // maintenance_units dihitung 1x dari data yang sama (bukan 2 query berulang).
+        $latestByUnit = $this->latestStatuses($end)->keyBy('unit_id');
+        $maintenanceCount = 0;
+        foreach ($units as $u) {
+            $status = $latestByUnit->get($u->id)->status ?? 'ready';
+            if (in_array($status, ['breakdown', 'servis'])) $maintenanceCount++;
+        }
 
         return [
             'kpi' => [
                 'fuel'             => round($fuel, 2),
                 'tonnage'          => round($tonnage, 2),
                 'selected_unit'    => $selectedUnit,
-                'active_units'     => $unitCount - $this->maintenanceUnitCount($end),
-                'maintenance_units'=> $this->maintenanceUnitCount($end),
+                'active_units'     => $unitCount - $maintenanceCount,
+                'maintenance_units'=> $maintenanceCount,
                 'pa'               => round($pa, 2),
                 'ua'               => round($ua, 2),
                 'sh'               => $sh,
@@ -266,35 +275,62 @@ class DashboardReportService
             ->get();
     }
 
-    private function bdHoursForRange(Carbon $start, Carbon $end): float
+    /** Total jam maintenance per unit dalam range — 1 query untuk semua unit. */
+    private function bdHoursByUnit(Carbon $start, Carbon $end): array
     {
-        $rangeStart = $start->copy()->startOfDay()->toDateTimeString();
-        $rangeEnd = $end->copy()->endOfDay()->toDateTimeString();
+        // Portable: hitung overlap di PHP agar jalan di MySQL maupun pgsql
+        // (raw TIMESTAMPDIFF hanya ada di MySQL).
+        $rangeStart = $start->copy()->startOfDay();
+        $rangeEnd = $end->copy()->endOfDay();
+        $now = Carbon::now();
 
-        return (float) UnitUtilization::whereIn('status', ['breakdown', 'servis'])
+        $rows = UnitUtilization::whereIn('status', ['breakdown', 'servis'])
             ->where('started_at', '<=', $rangeEnd)
             ->where(function ($q) use ($rangeStart) {
                 $q->whereNull('ended_at')->orWhere('ended_at', '>=', $rangeStart);
             })
-            ->sum(DB::raw(
-                "COALESCE(GREATEST(0, TIMESTAMPDIFF(SECOND, GREATEST(started_at, '{$rangeStart}'), LEAST(COALESCE(ended_at, NOW()), '{$rangeEnd}'))) / 3600, 0)"
-            ));
+            ->get(['unit_id', 'started_at', 'ended_at']);
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[$row->unit_id] = ($map[$row->unit_id] ?? 0)
+                + $this->overlapHours($row->started_at, $row->ended_at, $rangeStart, $rangeEnd, $now);
+        }
+        return $map;
     }
 
-    private function unitMaintenanceHours(int $unitId, Carbon $start, Carbon $end): float
+    /** WH (cap 12/jam) per unit per shift — 1 query GROUP BY per tabel. */
+    private function whByUnitShift(string $table, Carbon $start, Carbon $end, Request $request): array
     {
-        $rangeStart = $start->copy()->startOfDay()->toDateTimeString();
-        $rangeEnd = $end->copy()->endOfDay()->toDateTimeString();
+        $rows = DB::table($table)
+            ->whereBetween('tanggal', [$start->toDateString(), $end->toDateString()])
+            ->when($request->filled('shift'), fn ($q) => $q->where('shift', $request->shift))
+            ->when($table === 'non_ritasis', fn ($q) => $q->whereNotNull('unit_id'))
+            ->select('unit_id', 'shift', DB::raw('SUM(LEAST(hm_total, 12)) as wh'))
+            ->groupBy('unit_id', 'shift')
+            ->get();
 
-        return (float) UnitUtilization::where('unit_id', $unitId)
-            ->whereIn('status', ['breakdown', 'servis'])
-            ->where('started_at', '<=', $rangeEnd)
-            ->where(function ($q) use ($rangeStart) {
-                $q->whereNull('ended_at')->orWhere('ended_at', '>=', $rangeStart);
-            })
-            ->sum(DB::raw(
-                "COALESCE(GREATEST(0, TIMESTAMPDIFF(SECOND, GREATEST(started_at, '{$rangeStart}'), LEAST(COALESCE(ended_at, NOW()), '{$rangeEnd}'))) / 3600, 0)"
-            ));
+        $map = [];
+        foreach ($rows as $row) {
+            $map[$row->unit_id][$row->shift] = (float) $row->wh;
+        }
+        return $map;
+    }
+
+    /** Durasi overlap (jam) antara interval [eventStart, eventEnd ?? now] dan range, di-clamp >= 0. */
+    private function overlapHours($eventStart, $eventEnd, Carbon $rangeStart, Carbon $rangeEnd, Carbon $now): float
+    {
+        if ($eventStart === null) {
+            return 0.0;
+        }
+        $s = $eventStart instanceof Carbon ? $eventStart : Carbon::parse($eventStart);
+        $e = $eventEnd === null ? $now : ($eventEnd instanceof Carbon ? $eventEnd : Carbon::parse($eventEnd));
+        $overlapStart = $s->greaterThan($rangeStart) ? $s : $rangeStart;
+        $overlapEnd = $e->lessThan($rangeEnd) ? $e : $rangeEnd;
+        if ($overlapEnd->lessThanOrEqualTo($overlapStart)) {
+            return 0.0;
+        }
+        return $overlapStart->diffInSeconds($overlapEnd) / 3600;
     }
 
     private function periodLabel(string $period, Carbon $start, Carbon $end): string
@@ -329,18 +365,18 @@ class DashboardReportService
         return $days;
     }
 
-    private function availabilityByType(Carbon $start, Carbon $end, $units, Request $request): array
+    private function availabilityByType(Carbon $start, Carbon $end, $units, Request $request, array $bdByUnit = []): array
     {
         $days = (int) $start->diffInDays($end) + 1;
         $hoursPerDay = $request->filled('shift') ? 12 : 24;
         // Hanya 4 tipe, urut: Sany=loader, ADT=dump_truck, Dozr=bulldozer, Exa=excavator
         $allowed = ['loader', 'dump_truck', 'bulldozer', 'excavator'];
-        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay) {
+        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($days, $hoursPerDay, $bdByUnit) {
             $count = $typeUnits->count();
             $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
             foreach ($typeUnits as $u) {
-                $bd += $this->unitMaintenanceHours($u->id, $start, $end);
+                $bd += (float) ($bdByUnit[$u->id] ?? 0);
             }
             $available = max(0.0, $sh - $bd);
             $pct = $sh > 0 ? round(min(100.0, ($available / $sh) * 100), 1) : 0;
@@ -349,24 +385,26 @@ class DashboardReportService
         return $byType;
     }
 
-    private function uoaByType(Carbon $start, Carbon $end, $units, $baseQ, $baseNonRitasiQ, Request $request): array
+    private function uoaByType(Carbon $start, Carbon $end, $units, array $whRitasiByUnit, array $whNonRitasiByUnit, array $bdByUnit, Request $request): array
     {
         $days = (int) $start->diffInDays($end) + 1;
         $hoursPerDay = $request->filled('shift') ? 12 : 24;
         // Hanya 4 tipe, urut: Sany=loader, ADT=dump_truck, Dozr=bulldozer, Exa=excavator
         $allowed = ['loader', 'dump_truck', 'bulldozer', 'excavator'];
-        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($start, $end, $days, $hoursPerDay, $baseQ, $baseNonRitasiQ) {
+        // Hormati filter shift seperti query lama ($baseQ tertapis shift bila diisi).
+        $shifts = $request->filled('shift') ? [$request->shift] : ['siang', 'malam'];
+        $byType = $units->whereIn('tipe', $allowed)->groupBy('tipe')->map(function ($typeUnits, $type) use ($days, $hoursPerDay, $whRitasiByUnit, $whNonRitasiByUnit, $bdByUnit, $shifts) {
             $count = $typeUnits->count();
             $sh = $count * $hoursPerDay * $days;
             $bd = 0.0;
+            $wh = 0.0;
             foreach ($typeUnits as $u) {
-                $bd += $this->unitMaintenanceHours($u->id, $start, $end);
+                $bd += (float) ($bdByUnit[$u->id] ?? 0);
+                foreach ($shifts as $s) {
+                    $wh += (float) (($whRitasiByUnit[$u->id][$s] ?? 0) + ($whNonRitasiByUnit[$u->id][$s] ?? 0));
+                }
             }
             $available = max(0.0, $sh - $bd);
-            $unitIds = $typeUnits->pluck('id');
-            $whRitasi = (float) $baseQ()->whereIn('unit_id', $unitIds)->sum(DB::raw('LEAST(hm_total, 12)'));
-            $whNonRitasi = (float) $baseNonRitasiQ()->whereIn('unit_id', $unitIds)->sum(DB::raw('LEAST(hm_total, 12)'));
-            $wh = $whRitasi + $whNonRitasi;
             $pct = $available > 0 ? round(min(100.0, ($wh / $available) * 100), 1) : 0;
             return ['type' => $type, 'pct' => $pct];
         })->sortBy(fn ($row) => array_search($row['type'], $allowed))->values()->all();

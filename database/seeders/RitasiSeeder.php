@@ -29,7 +29,6 @@ class RitasiSeeder extends Seeder
             return;
         }
 
-        $lokasiList = ['Pit A North', 'Pit B South', 'Disposal 1', 'Hauling Road A', 'Stockpile 1', 'Pit C East'];
         $deskripsiList = ['Hauling Bauxite Ore ke Stockpile', 'Hauling Overburden ke Disposal 1', 'Hauling Mining Tuff ke Crusher'];
         $shifts = ['siang', 'malam'];
 
@@ -70,7 +69,6 @@ class RitasiSeeder extends Seeder
                         'quantity' => $quantity,
                         'quantity_unit' => 'ton',
                         'fuel_consumption' => $fuel,
-                        'lokasi_pekerjaan' => $lokasiList[array_rand($lokasiList)],
                         'deskripsi_pekerjaan' => $deskripsiList[array_rand($deskripsiList)],
                         'kendala' => rand(0, 10) > 8 ? 'Antrean di crusher sempat padat 15 menit' : null,
                         'status' => $isValidated ? 'validated' : 'pending',

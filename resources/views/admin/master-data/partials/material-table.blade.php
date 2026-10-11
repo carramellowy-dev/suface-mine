@@ -31,7 +31,6 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">NAMA MATERIAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">KODE MATERIAL</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">SATUAN</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">STATUS</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">AKSI</th>
                 </tr>
             </thead>
@@ -42,19 +41,6 @@
                         <td class="px-4 py-3 text-sm font-medium text-[var(--text)]">{{ $material->nama }}</td>
                         <td class="px-4 py-3 text-sm font-mono text-[var(--text-muted)]">{{ $material->kode }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text-muted)]">{{ $material->satuan }}</td>
-                        <td class="px-4 py-3">
-                            <span class="badge {{ $material->status_badge }}">
-                                <span class="w-1.5 h-1.5 rounded-full
-                                    {{ match($material->status) {
-                                        'active' => 'bg-green-500',
-                                        'low_stock' => 'bg-yellow-500',
-                                        'inactive' => 'bg-gray-400',
-                                        'restricted' => 'bg-red-500',
-                                        default => 'bg-gray-400',
-                                    } }}"></span>
-                                {{ str_replace('_', ' ', ucfirst($material->status)) }}
-                            </span>
-                        </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <button class="text-[var(--primary)] hover:opacity-75" onclick="editMaterial({{ $material->id }})">
@@ -68,7 +54,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data</td>
+                        <td colspan="5" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data</td>
                     </tr>
                 @endforelse
             </tbody>

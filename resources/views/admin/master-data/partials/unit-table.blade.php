@@ -37,22 +37,29 @@
             </thead>
             <tbody class="divide-y divide-[var(--border)]">
                 @forelse($units as $index => $unit)
+                    @php($realStatus = ($realStatuses[$unit->id] ?? 'standby'))
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 text-sm text-[var(--text)]">{{ $index + 1 }}</td>
                         <td class="px-4 py-3 text-sm font-medium text-[var(--text)]">{{ $unit->kode }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text-muted)]">{{ $unit->nama }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text-muted)]">{{ $unit->tahun ?? '-' }}</td>
                         <td class="px-4 py-3">
-                            <span class="badge {{ $unit->real_status_badge }}">
+                            <span class="badge {{ match($realStatus) {
+                                'active' => 'badge-active',
+                                'servis' => 'badge-maintenance',
+                                'breakdown' => 'badge-breakdown',
+                                'standby' => 'badge-standby',
+                                default => 'badge-standby',
+                            } }}">
                                 <span class="w-1.5 h-1.5 rounded-full
-                                    {{ match($unit->real_status) {
+                                    {{ match($realStatus) {
                                         'active' => 'bg-green-500',
                                         'servis' => 'bg-yellow-500',
                                         'breakdown' => 'bg-red-500',
                                         'standby' => 'bg-gray-400',
                                         default => 'bg-gray-400',
                                     } }}"></span>
-                                {{ ucfirst($unit->real_status) }}
+                                {{ ucfirst($realStatus) }}
                             </span>
                         </td>
                         <td class="px-4 py-3">

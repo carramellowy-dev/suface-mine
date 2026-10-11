@@ -18,6 +18,16 @@ use App\Http\Controllers\RekapanController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
+// ID model selalu numerik: cegah string nyasar ke query pgsql (500) dan
+// kembalikan 404 yang benar untuk URL seperti /rekapan/export (GET).
+Route::pattern('unit', '[0-9]+');
+Route::pattern('material', '[0-9]+');
+Route::pattern('area', '[0-9]+');
+Route::pattern('target', '[0-9]+');
+Route::pattern('user', '[0-9]+');
+Route::pattern('spv', '[0-9]+');
+Route::pattern('pegawai', '[0-9]+');
+
 // Public
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
@@ -69,6 +79,7 @@ Route::middleware('auth')->group(function () {
 
         // Utilization
         Route::get('utilization', [UtilizationController::class, 'index'])->name('utilization.index');
+        Route::get('utilization/summary', [UtilizationController::class, 'summary'])->name('utilization.summary');
 
         // Rekapan
         Route::get('rekapan', [RekapanController::class, 'index'])->name('rekapan.index');
@@ -121,6 +132,7 @@ Route::middleware('auth')->group(function () {
 
         // Utilization
         Route::get('utilization', [UtilizationController::class, 'index'])->name('utilization.index');
+        Route::get('utilization/summary', [UtilizationController::class, 'summary'])->name('utilization.summary');
 
         // Rekapan
         Route::get('rekapan', [RekapanController::class, 'index'])->name('rekapan.index');

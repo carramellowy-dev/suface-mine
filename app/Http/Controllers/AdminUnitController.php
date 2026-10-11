@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Unit;
 use App\Models\Area;
 use App\Models\Material;
+use App\Models\Ritasi;
+use App\Models\NonRitasi;
+use App\Models\UnitUtilization;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -30,6 +33,27 @@ class AdminUnitController extends Controller
                     $query->where('status', $request->status);
                 }
                 $data['units'] = $query->orderBy('kode')->paginate(10);
+                // Batched real_status (3 query untuk 1 halaman, bukan 3N via accessor).
+                $now = now();
+                $today = $now->toDateString();
+                $shift = ($now->hour >= 6 && $now->hour < 18) ? 'siang' : 'malam';
+                $openByUnit = UnitUtilization::whereNull('ended_at')->orderByDesc('started_at')
+                    ->get(['unit_id', 'status'])->groupBy('unit_id');
+                $usedRitasi = Ritasi::where('tanggal', $today)->where('shift', $shift)
+                    ->pluck('unit_id')->flip();
+                $usedNonRitasi = NonRitasi::where('tanggal', $today)->where('shift', $shift)
+                    ->whereNotNull('unit_id')->pluck('unit_id')->flip();
+                $realStatuses = [];
+                foreach ($data['units'] as $u) {
+                    if (isset($openByUnit[$u->id])) {
+                        $realStatuses[$u->id] = $openByUnit[$u->id]->first()->status;
+                    } elseif (isset($usedRitasi[$u->id]) || isset($usedNonRitasi[$u->id])) {
+                        $realStatuses[$u->id] = 'active';
+                    } else {
+                        $realStatuses[$u->id] = 'standby';
+                    }
+                }
+                $data['realStatuses'] = $realStatuses;
                 break;
 
             case 'material':
@@ -79,7 +103,7 @@ class AdminUnitController extends Controller
                           ->orWhere('kode', 'like', "%{$search}%");
                     });
                 }
-                $data['targets'] = $query->orderBy('tanggal', 'desc')->paginate(10);
+                $data['targets'] = $query->orderBy('id', 'desc')->paginate(10);
                 $data['materials'] = Material::orderBy('nama')->get();
                 break;
         }

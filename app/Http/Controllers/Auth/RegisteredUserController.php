@@ -40,7 +40,11 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'username' => $request->username,
             'password' => Hash::make($request->password),
+            'role' => 'pegawai',
         ]);
+
+        $pegawai = \App\Models\Pegawai::firstOrCreate(['nama' => $request->name]);
+        $user->update(['pegawai_id' => $pegawai->id]);
 
         event(new Registered($user));
 

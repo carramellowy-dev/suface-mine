@@ -8,6 +8,15 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     private function hasIndex(string $table, string $index): bool {
         $conn = Schema::getConnection();
+        $driver = $conn->getDriverName();
+        if ($driver === 'pgsql') {
+            // information_schema.statistics layout beda di pgsql; pakai pg_indexes.
+            return DB::table('pg_indexes')
+                ->where('schemaname', 'public')
+                ->where('tablename', $table)
+                ->where('indexname', $index)
+                ->exists();
+        }
         $db = $conn->getDatabaseName();
         return DB::table('information_schema.statistics')
             ->where('table_schema', $db)

@@ -30,8 +30,6 @@
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">NO</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">NAMA AREA</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">KODE AREA</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">PENANGGUNG JAWAB</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">STATUS</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">AKSI</th>
                 </tr>
             </thead>
@@ -41,24 +39,6 @@
                         <td class="px-4 py-3 text-sm text-[var(--text)]">{{ $index + 1 }}</td>
                         <td class="px-4 py-3 text-sm font-medium text-[var(--text)]">{{ $area->nama }}</td>
                         <td class="px-4 py-3 text-sm text-[var(--text-muted)]">{{ $area->kode }}</td>
-                        <td class="px-4 py-3 text-sm text-[var(--text-muted)]">
-                            {{ $area->spvs->first()->name ?? '-' }}
-                        </td>
-                        <td class="px-4 py-3">
-                            @php
-                                $status = $area->status ?? 'active';
-                                $statusConfig = match($status) {
-                                    'active' => ['label' => 'Aktif', 'class' => 'badge-active', 'dot' => 'bg-green-500'],
-                                    'cuti' => ['label' => 'Cuti', 'class' => 'badge-maintenance', 'dot' => 'bg-yellow-500'],
-                                    'non-aktif' => ['label' => 'Non-Aktif', 'class' => 'badge-inactive', 'dot' => 'bg-gray-400'],
-                                    default => ['label' => 'Aktif', 'class' => 'badge-active', 'dot' => 'bg-green-500'],
-                                };
-                            @endphp
-                            <span class="badge {{ $statusConfig['class'] }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $statusConfig['dot'] }}"></span>
-                                {{ $statusConfig['label'] }}
-                            </span>
-                        </td>
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <button class="text-[var(--primary)] hover:opacity-75" onclick="editArea({{ $area->id }})">
@@ -72,7 +52,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data</td>
+                        <td colspan="4" class="px-4 py-8 text-center text-[var(--text-muted)]">Tidak ada data</td>
                     </tr>
                 @endforelse
             </tbody>
